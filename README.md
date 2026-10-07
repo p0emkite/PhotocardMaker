@@ -128,3 +128,18 @@ Custom group logos can optionally be committed directly to this repository from 
 - SVG logos are uploaded as sanitized SVG; bitmap logos are uploaded in their optimized WebP/PNG form
 - Group metadata and representative colors remain local browser data
 - If GitHub upload is enabled but no token is connected, group save is blocked rather than silently falling back to browser-only logo storage
+
+
+## Template Pack 42–48
+
+1차 신규 프레임 7종:
+
+- 42. Candy Pop — 롤리팝, 포장 캔디, 별사탕 계열의 달콤한 프레임
+- 43. Teddy Bear — 브라운/크림, 스티치, 테디베어 중심의 포근한 프레임
+- 44. Rising Star — 초신성, 무대 조명, 광채와 스파클 중심의 대형 신인 컨셉
+- 45. Japan Traditional — 부채, 금테, 세이카이하 패턴을 활용한 일본 전통풍
+- 46. Fireworks — 여름 밤의 다색 불꽃과 빛망울을 강조한 불꽃놀이 프레임
+- 47. Gyaru — 핑크/블랙, 스티커, 하트, 번개, 키치 장식을 활용한 갸루 컨셉
+- 48. City Pop — 네온, 석양, 밤 도시 스카이라인, 레트로 그리드의 시티팝 컨셉
+
+모든 템플릿은 앞/뒷면 세트이며 기존 그룹 로고, 컬러, 프리셋, 작업 캔버스 해상도 기능과 연동됩니다.
