@@ -593,7 +593,7 @@ async function savePair(){
     await renderFront(f,photo,ctrl(),scale);await renderBack(b,ctrl(),scale);
     z.file(base,await canvasBlob(f));z.file(backName(base),await canvasBlob(b));
     if($("exportGuideCheck").checked){z.file(guideName(base),await canvasBlob(makePrintGuideCanvas(f)));z.file(guideName(backName(base)),await canvasBlob(makePrintGuideCanvas(b)))}
-    const zipName=base.replace(/\.png$/i,`_${d.label}_FRONT_BACK.zip`);
+    const zipName=base.replace(/\.png$/i,"_FRONT_BACK.zip");
     await saveBlob(await z.generateAsync({type:"blob",compression:"DEFLATE"}),zipName);
     markDone();status(`앞·뒷면 ZIP 저장 완료 · ${d.width} × ${d.height}${$("exportGuideCheck").checked?" · GUIDE 2개 포함":""}`,false,true)
   }catch(e){status("앞·뒷면 저장 실패: "+e.message,true)}
