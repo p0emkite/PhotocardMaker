@@ -6,7 +6,7 @@ const PROGRESS_KEY="photocard-maker-v2-excel-progress";
 const DB_NAME="photocard-maker-storage",DB_STORE="handles",DB_KEY="folder";
 const COLUMNS=["템플릿","그룹","요소 컬러","텍스트 컬러","이름","이미지명","저장파일명"];
 const BASE_COLORS={"샴페인 골드":"#E7C68E","아이보리 골드":"#F5E5C2","벚꽃 핑크":"#F3B6C4","라일락":"#CDB8E8","로즈골드":"#D8A0A6","진주빛 아이보리":"#F4EFE3","크림 아이보리":"#F6EBD8","파우더 블루":"#B9D2E7","민트":"#B8DCCF","복숭아빛":"#F3BEA8","연핑크":"#F4BBC8","골드":"#D9B76E","실버":"#D7D9DE","화이트":"#FFFFFF","블랙":"#111111"};
-const GROUPS={"":{label:"로고 없음",logo:null},"IVE":{label:"IVE",logo:"./assets/logos/ive.svg"}};
+const GROUPS={"":{label:"로고 없음",logo:null},"IVE":{label:"IVE",logo:"./assets/logos/ive.png"}};
 let customColors=loadJson(COLOR_KEY,{});
 let photo=null,photoFile=null,currentSide="front",drag=null,saveDir=null,raf=0,filenameEdited=false;
 let batchRows=[],batchFiles=[],excelRows=[],selectedId=null,sortCol=null,sortDesc=false,filters=Object.fromEntries(COLUMNS.map(c=>[c,""]));
