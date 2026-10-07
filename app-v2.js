@@ -21,7 +21,7 @@ let photo=null,photoFile=null,originalPhotoFile=null,workingPhotoBlob=null,signa
 let cutoutModule=null;
 const CUTOUT_CONFIG={model:"isnet",output:{format:"image/png",quality:1}};
 function webGpuAvailable(){return typeof navigator!=="undefined"&&!!navigator.gpu}
-let batchRows=[],batchFiles=[],excelRows=[],selectedId=null,sortCol=null,sortDesc=false,filters=Object.fromEntries(COLUMNS.map(c=>[c,""]));
+let batchRows=[],batchFiles=[],excelImageFiles=[],excelRows=[],selectedId=null,sortCol=null,sortDesc=false,filters=Object.fromEntries(COLUMNS.map(c=>[c,""]));
 let editColorName=null;
 let templateBrowserFilter="all",templateThumbToken=0,templateThumbPlaceholder=null;
 const templateThumbCache=new Map();
@@ -359,81 +359,162 @@ async function saveCurrent(){if(currentSide==="front"&&!photo)return;const c=doc
 async function savePair(){if(!photo)return;try{const z=new JSZip(),base=sanitize($("filenameInput").value,defaultName()),f=document.createElement("canvas"),b=document.createElement("canvas");await renderFront(f);await renderBack(b);z.file(base,await canvasBlob(f));z.file(backName(base),await canvasBlob(b));await saveBlob(await z.generateAsync({type:"blob",compression:"DEFLATE"}),base.replace(/\.png$/i,"_FRONT_BACK.zip"));markDone();status("앞·뒷면 ZIP 저장 완료",false,true)}catch(e){status("앞·뒷면 저장 실패: "+e.message,true)}}
 
 function ensureXlsx(){if(!window.XLSX)throw new Error("Excel 라이브러리가 로드되지 않았습니다.")}
-function xlsxXmlEscape(s){return String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"}[ch]))}
-function excelValidationXml({sqref,name,title,prompt}){
-  return `<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="1" errorStyle="stop" errorTitle="${xlsxXmlEscape(title)}" error="${xlsxXmlEscape("목록에 있는 값을 선택해 주세요.")}" promptTitle="${xlsxXmlEscape(title)}" prompt="${xlsxXmlEscape(prompt)}" sqref="${sqref}"><formula1>${name}</formula1></dataValidation>`
-}
 async function sampleExcel(){
   try{
-    ensureXlsx();if(!window.JSZip)throw new Error("ZIP 라이브러리가 로드되지 않았습니다.");
+    if(!window.ExcelJS)throw new Error("Excel 양식 생성 라이브러리가 로드되지 않았습니다.");
+    const workbook=new ExcelJS.Workbook();
+    workbook.creator="PhotocardMaker";
+    workbook.created=new Date();
+    workbook.modified=new Date();
+
+    const input=workbook.addWorksheet("입력",{views:[{state:"frozen",ySplit:1,activeCell:"A2"}]});
+    const guide=workbook.addWorksheet("사용안내");
+    const lists=workbook.addWorksheet("목록");
+    lists.state="veryHidden";
+
+    input.columns=[
+      {header:"템플릿",key:"template",width:30},
+      {header:"그룹",key:"group",width:18},
+      {header:"요소 컬러",key:"element",width:20},
+      {header:"텍스트 컬러",key:"text",width:20},
+      {header:"배경 컬러",key:"background",width:20},
+      {header:"이름",key:"name",width:22},
+      {header:"이미지명",key:"image",width:32},
+      {header:"저장파일명",key:"filename",width:38}
+    ];
+    input.autoFilter={from:"A1",to:"H501"};
+    input.getRow(1).height=30;
+    input.getRow(1).eachCell(cell=>{
+      cell.font={name:"맑은 고딕",size:11,bold:true,color:{argb:"FFFFFFFF"}};
+      cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF315F9B"}};
+      cell.alignment={vertical:"middle",horizontal:"center"};
+      cell.border={bottom:{style:"thin",color:{argb:"FF23476F"}}};
+    });
+
+    const sample=input.getRow(2);
+    sample.values=["01. Ribbon Classic","IVE","샴페인 골드","아이보리 골드","템플릿 기본값","WONYOUNG","wonyoung.jpg","WONYOUNG_RIBBON.png"];
+    sample.height=26;
+
+    for(let r=2;r<=501;r++){
+      const row=input.getRow(r);row.height=24;
+      row.eachCell({includeEmpty:true},cell=>{
+        cell.font={name:"맑은 고딕",size:10,color:{argb:"FF273243"}};
+        cell.alignment={vertical:"middle",horizontal:["F","G","H"].includes(cell.col)? "left":"center"};
+        cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:r===2?"FFEAF2FF":(r%2===0?"FFFAFBFD":"FFFFFFFF")}};
+        cell.border={
+          bottom:{style:"hair",color:{argb:"FFE1E6ED"}},
+          right:{style:"hair",color:{argb:"FFF0F2F5"}}
+        };
+      });
+    }
+
+    input.getCell("A1").note="셀을 클릭하면 드롭다운에서 템플릿을 선택할 수 있습니다.";
+    input.getCell("B1").note="등록된 그룹을 선택합니다.";
+    input.getCell("C1").note="요소 장식에 사용할 컬러입니다.";
+    input.getCell("D1").note="이름 등 텍스트에 사용할 컬러입니다.";
+    input.getCell("E1").note="템플릿 기본값 또는 원하는 배경 컬러를 선택합니다.";
+    input.getCell("G1").note="연결할 이미지 폴더 안의 실제 파일명과 동일하게 입력하세요.";
+    input.getCell("H1").note="비워 두면 PhotocardMaker가 자동으로 저장 파일명을 만듭니다.";
+
     const templates=getTemplateList().map(t=>t.label);
     const groups=Object.values(GROUPS).map(g=>g.label);
     const colors=Object.keys(allColors());
     const backgrounds=["템플릿 기본값",...colors];
-    const sample=["01. Ribbon Classic","IVE","샴페인 골드","아이보리 골드","템플릿 기본값","WONYOUNG","wonyoung.jpg","WONYOUNG_RIBBON.png"];
-    const ws=XLSX.utils.aoa_to_sheet([COLUMNS,sample]);
-    ws["!cols"]=[{wch:26},{wch:16},{wch:18},{wch:18},{wch:18},{wch:20},{wch:28},{wch:34}];
-    ws["!autofilter"]={ref:"A1:H501"};
-    const guide=XLSX.utils.aoa_to_sheet([
-      ["PhotocardMaker 일괄 생성 양식"],
-      ["입력 방법","'입력' 시트의 2행부터 한 행당 포토카드 1개를 입력하세요."],
-      ["템플릿","A열 셀을 클릭하면 드롭다운에서 현재 지원하는 템플릿을 선택할 수 있습니다."],
-      ["그룹 / 컬러","그룹 및 요소·텍스트·배경 컬러도 드롭다운으로 선택할 수 있습니다."],
-      ["배경 컬러","'템플릿 기본값'을 선택하면 해당 템플릿의 원래 배경을 사용합니다."],
-      ["이미지명","선택할 이미지 폴더 안의 실제 파일명과 동일하게 입력하세요. 예: wonyoung.jpg"],
-      ["저장파일명","확장자 .png는 생략해도 됩니다. 비워 두면 이름과 템플릿을 기준으로 자동 생성됩니다."],
-      ["주의","열 제목은 변경하지 마세요. 목록 시트는 드롭다운 원본이므로 숨김 처리되어 있습니다."]
-    ]);
-    guide["!cols"]=[{wch:22},{wch:88}];
-    const listRows=Math.max(templates.length,groups.length,colors.length,backgrounds.length)+1;
-    const listData=[["템플릿","그룹","요소 컬러","텍스트 컬러","배경 컬러"]];
-    for(let i=0;i<listRows-1;i++)listData.push([templates[i]||"",groups[i]||"",colors[i]||"",colors[i]||"",backgrounds[i]||""]);
-    const lists=XLSX.utils.aoa_to_sheet(listData);
-    lists["!cols"]=[{wch:32},{wch:18},{wch:20},{wch:20},{wch:20}];
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,"입력");
-    XLSX.utils.book_append_sheet(wb,guide,"사용안내");
-    XLSX.utils.book_append_sheet(wb,lists,"목록");
-    wb.Workbook=wb.Workbook||{};wb.Workbook.Sheets=wb.Workbook.Sheets||[];
-    wb.Workbook.Sheets[2]={...(wb.Workbook.Sheets[2]||{}),Hidden:1};
-    const raw=XLSX.write(wb,{bookType:"xlsx",type:"array",compression:true});
-    const zip=await JSZip.loadAsync(raw);
-    const sheetPath="xl/worksheets/sheet1.xml";
-    let sheetXml=await zip.file(sheetPath).async("string");
+    const listSets=[
+      ["템플릿",templates],
+      ["그룹",groups],
+      ["요소 컬러",colors],
+      ["텍스트 컬러",colors],
+      ["배경 컬러",backgrounds]
+    ];
+
+    listSets.forEach(([title,values],colIdx)=>{
+      const col=colIdx+1;
+      lists.getCell(1,col).value=title;
+      values.forEach((v,i)=>lists.getCell(i+2,col).value=v);
+    });
+    workbook.definedNames.add(`'목록'!$A$2:$A$${templates.length+1}`,"TemplateList");
+    workbook.definedNames.add(`'목록'!$B$2:$B$${groups.length+1}`,"GroupList");
+    workbook.definedNames.add(`'목록'!$C$2:$C$${colors.length+1}`,"ElementColorList");
+    workbook.definedNames.add(`'목록'!$D$2:$D$${colors.length+1}`,"TextColorList");
+    workbook.definedNames.add(`'목록'!$E$2:$E$${backgrounds.length+1}`,"BackgroundColorList");
+
     const validations=[
-      excelValidationXml({sqref:"A2:A501",name:"TemplateList",title:"템플릿 선택",prompt:"목록에서 포토카드 템플릿을 선택하세요."}),
-      excelValidationXml({sqref:"B2:B501",name:"GroupList",title:"그룹 선택",prompt:"등록된 그룹 또는 로고 없음을 선택하세요."}),
-      excelValidationXml({sqref:"C2:C501",name:"ElementColorList",title:"요소 컬러 선택",prompt:"목록에서 요소 컬러를 선택하세요."}),
-      excelValidationXml({sqref:"D2:D501",name:"TextColorList",title:"텍스트 컬러 선택",prompt:"목록에서 텍스트 컬러를 선택하세요."}),
-      excelValidationXml({sqref:"E2:E501",name:"BackgroundColorList",title:"배경 컬러 선택",prompt:"템플릿 기본값 또는 원하는 배경 컬러를 선택하세요."})
+      ["A2:A501","=TemplateList","템플릿 선택","목록에서 포토카드 템플릿을 선택하세요."],
+      ["B2:B501","=GroupList","그룹 선택","등록된 그룹 또는 로고 없음을 선택하세요."],
+      ["C2:C501","=ElementColorList","요소 컬러 선택","목록에서 요소 컬러를 선택하세요."],
+      ["D2:D501","=TextColorList","텍스트 컬러 선택","목록에서 텍스트 컬러를 선택하세요."],
+      ["E2:E501","=BackgroundColorList","배경 컬러 선택","템플릿 기본값 또는 원하는 배경 컬러를 선택하세요."]
     ];
-    const validationBlock=`<dataValidations count="${validations.length}">${validations.join("")}</dataValidations>`;
-    if(!sheetXml.includes("</worksheet>"))throw new Error("Excel 시트 XML을 구성하지 못했습니다.");
-    sheetXml=sheetXml.replace("</worksheet>",validationBlock+"</worksheet>");
-    zip.file(sheetPath,sheetXml);
-    const wbPath="xl/workbook.xml";let workbookXml=await zip.file(wbPath).async("string");
-    const refs=[
-      ["TemplateList",templates.length,"A"],
-      ["GroupList",groups.length,"B"],
-      ["ElementColorList",colors.length,"C"],
-      ["TextColorList",colors.length,"D"],
-      ["BackgroundColorList",backgrounds.length,"E"]
+    validations.forEach(([range,formula,title,prompt])=>{
+      input.dataValidations.add(range,{
+        type:"list",allowBlank:true,showInputMessage:true,showErrorMessage:true,
+        formulae:[formula],promptTitle:title,prompt,
+        errorTitle:"목록에서 선택",error:"드롭다운 목록에 있는 값을 선택해 주세요."
+      });
+    });
+
+    input.getColumn("A").alignment={vertical:"middle",horizontal:"left"};
+    input.getColumn("F").alignment={vertical:"middle",horizontal:"left"};
+    input.getColumn("G").alignment={vertical:"middle",horizontal:"left"};
+    input.getColumn("H").alignment={vertical:"middle",horizontal:"left"};
+
+    guide.mergeCells("A1:F2");
+    const title=guide.getCell("A1");title.value="PhotocardMaker · 일괄 생성 양식";
+    title.font={name:"맑은 고딕",size:20,bold:true,color:{argb:"FFFFFFFF"}};
+    title.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF315F9B"}};
+    title.alignment={vertical:"middle",horizontal:"left",indent:1};
+    guide.getRow(1).height=28;guide.getRow(2).height=28;
+    guide.getColumn("A").width=22;for(const c of ["B","C","D","E","F"])guide.getColumn(c).width=18;
+    const notes=[
+      ["입력 방법","‘입력’ 시트 2행부터 한 행당 포토카드 1개를 입력하세요."],
+      ["드롭다운","템플릿·그룹·요소 컬러·텍스트 컬러·배경 컬러는 셀의 ▼ 목록에서 선택할 수 있습니다."],
+      ["이미지명","PhotocardMaker에서 ‘이미지 폴더 연결’을 먼저 누른 뒤, 폴더 안의 실제 파일명을 입력하세요."],
+      ["행 클릭","엑셀을 불러온 뒤 우측 표에서 행을 클릭하면 템플릿·그룹·컬러·이름·파일명과 연결된 사진까지 자동 적용됩니다."],
+      ["배경 컬러","‘템플릿 기본값’을 선택하면 각 템플릿의 원래 배경 디자인을 사용합니다."],
+      ["저장파일명","비워 두면 자동 생성됩니다. 직접 적을 경우 .png는 생략해도 됩니다."],
+      ["주의","첫 번째 행의 열 제목은 변경하지 마세요."]
     ];
-    const definedNames=`<definedNames>${refs.map(([name,count,col])=>`<definedName name="${name}">&apos;목록&apos;!${col}$2:${col}${count+1}</definedName>`).join("")}</definedNames>`;
-    if(workbookXml.includes("<definedNames>"))workbookXml=workbookXml.replace("</definedNames>",refs.map(([name,count,col])=>`<definedName name="${name}">&apos;목록&apos;!${col}$2:${col}${count+1}</definedName>`).join("")+"</definedNames>");
-    else workbookXml=workbookXml.replace("</workbook>",definedNames+"</workbook>");
-    // Force the source list sheet hidden even if a SheetJS version omits the Hidden flag.
-    workbookXml=workbookXml.replace(/(<sheet\b[^>]*name="목록"[^>]*)(\/>)/,m=>m.includes(' state=')?m:m.replace(/\/>$/,' state="hidden"/>'));
-    zip.file(wbPath,workbookXml);
-    const blob=await zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",compression:"DEFLATE"});
+    notes.forEach((n,i)=>{
+      const r=4+i;
+      guide.mergeCells(r,2,r,6);
+      guide.getCell(r,1).value=n[0];
+      guide.getCell(r,2).value=n[1];
+      guide.getCell(r,1).font={name:"맑은 고딕",bold:true,color:{argb:"FF315F9B"}};
+      guide.getCell(r,2).font={name:"맑은 고딕",color:{argb:"FF465568"}};
+      guide.getCell(r,1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFEAF2FF"}};
+      guide.getCell(r,2).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFF8FAFD"}};
+      guide.getRow(r).height=30;
+      for(let c=1;c<=6;c++)guide.getCell(r,c).border={bottom:{style:"hair",color:{argb:"FFDDE4EC"}}};
+      guide.getCell(r,2).alignment={vertical:"middle",wrapText:true};
+    });
+
+    input.pageSetup={orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0};
+    input.headerFooter.oddHeader="&CPhotocardMaker · 일괄 생성 입력";
+    input.headerFooter.oddFooter="&RPage &P / &N";
+
+    const buffer=await workbook.xlsx.writeBuffer();
+    const blob=new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
     downloadBlob(blob,"PhotocardMaker_일괄생성_양식.xlsx");
-    batchStatus("엑셀 양식을 다운로드했습니다. 템플릿·그룹·컬러 열은 셀 드롭다운으로 선택할 수 있습니다.",false,true);
+    batchStatus("새 엑셀 양식을 다운로드했습니다. A~E열은 실제 드롭다운으로 선택할 수 있습니다.",false,true);
     excelStatus("엑셀 양식을 다운로드했습니다. 작성 후 ‘엑셀 데이터 불러오기’로 불러오세요.");
-  }catch(e){batchStatus("엑셀 양식 생성 실패: "+e.message,true);excelStatus("엑셀 양식 생성 실패: "+e.message)}
+  }catch(e){
+    console.error(e);
+    batchStatus("엑셀 양식 생성 실패: "+e.message,true);
+    excelStatus("엑셀 양식 생성 실패: "+e.message)
+  }
 }
+
 async function parseExcel(file){ensureXlsx();const wb=XLSX.read(await file.arrayBuffer(),{type:"array",raw:false}),ws=wb.Sheets[wb.SheetNames.includes("입력")?"입력":wb.SheetNames[0]],grid=XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:false});let hr=-1,idx=[];for(let i=0;i<Math.min(20,grid.length);i++){const row=grid[i].map(x=>String(x).trim());if(COLUMNS.every(c=>row.includes(c))){hr=i;idx=COLUMNS.map(c=>row.indexOf(c));break}}if(hr<0)throw new Error("필요한 열을 찾지 못했습니다.");const out=[];for(let r=hr+1;r<grid.length;r++){const row={};COLUMNS.forEach((c,i)=>row[c]=String(grid[r]?.[idx[i]]??"").trim());if(COLUMNS.some(c=>row[c]))out.push({excelRow:r+1,row})}return out}
 function norm(s){return String(s||"").replaceAll("\\","/").replace(/^\.\//,"").toLowerCase()}
-function findBatchImage(name){const n=norm(name),base=n.split("/").pop();let a=batchFiles.filter(f=>norm(f.webkitRelativePath||f.name).endsWith(n));if(a.length===1)return a[0];a=batchFiles.filter(f=>f.name.toLowerCase()===base);return a.length===1?a[0]:null}
+function findImageInFiles(files,name){const n=norm(name),base=n.split("/").pop();let a=files.filter(f=>norm(f.webkitRelativePath||f.name).endsWith(n));if(a.length===1)return a[0];a=files.filter(f=>f.name.toLowerCase()===base);return a.length===1?a[0]:null}
+function findBatchImage(name){return findImageInFiles(batchFiles,name)}
+function findExcelImage(name){return findImageInFiles(excelImageFiles.length?excelImageFiles:batchFiles,name)}
+function connectExcelImageFolder(files){
+  excelImageFiles=[...(files||[])];
+  if(!excelImageFiles.length)return excelStatus("이미지 폴더가 연결되지 않았습니다.");
+  excelStatus(`이미지 폴더 연결 완료 · 이미지 ${excelImageFiles.length}개 · 이제 행 클릭 시 사진까지 자동 적용됩니다.`)
+}
 async function prepareBatch(){const ex=$("excelInput").files?.[0];batchFiles=[...($("imageFolderInput").files||[])];batchRows=[];$("batchBtn").disabled=true;if(!ex||!batchFiles.length)return batchStatus("Excel과 이미지 폴더를 모두 선택하세요.");try{batchRows=(await parseExcel(ex)).map(x=>({...x,state:"ready",message:""}));renderBatch();$("batchBtn").disabled=!batchRows.length;batchStatus(batchRows.length+"개 행을 읽었습니다.",false,true)}catch(e){batchStatus("Excel 읽기 실패: "+e.message,true)}}
 function renderBatch(){const body=batchRows.map(x=>`<tr class="${x.state}"><td>${x.excelRow}</td><td>${esc(x.row["그룹"])}</td><td>${esc(x.row["이름"])}</td><td>${esc(x.row["이미지명"])}</td><td>${esc(x.row["저장파일명"])}</td><td>${esc(x.message||x.state)}</td></tr>`).join("");$("batchTableWrap").innerHTML=`<table class="batch-table"><thead><tr><th>행</th><th>그룹</th><th>이름</th><th>이미지</th><th>저장파일명</th><th>상태</th></tr></thead><tbody>${body}</tbody></table>`}
 async function runBatch(){if(!batchRows.length)return;$("batchBtn").disabled=true;try{const zip=new JSZip();let ok=0,fail=0;for(const [i,item] of batchRows.entries()){const r=item.row;try{batchStatus(`${i+1}/${batchRows.length} 생성 중 · ${r["이름"]}`);const file=findBatchImage(r["이미지명"]);if(!file)throw new Error("이미지 없음");const bmp=await createImageBitmap(file,{imageOrientation:"from-image"}),baseCtrl=ctrl(),tid=templateIdFromValue(r["템플릿"]),td=templateDefaultState(tid),c={...baseCtrl,...td,template:tid,name:r["이름"]||baseCtrl.name,group:groupIdFromValue(r["그룹"],baseCtrl.group),element:colorValue(r["요소 컬러"],baseCtrl.element),text:colorValue(r["텍스트 컬러"],baseCtrl.text),background:backgroundColorValue(r["배경 컬러"],td.background??baseCtrl.background??"auto")},f=document.createElement("canvas"),b=document.createElement("canvas");await renderFront(f,bmp,c);await renderBack(b,c);bmp.close?.();const base=sanitize(r["저장파일명"],(r["이름"]||"card")+"_"+tid.toUpperCase()+"_650x1004.png");zip.file(base,await canvasBlob(f));zip.file(backName(base),await canvasBlob(b));item.state="done";item.message="앞·뒷면 완료";ok++}catch(e){item.state="error";item.message=e.message;fail++}renderBatch()}if(!ok)throw new Error("성공한 카드가 없습니다.");downloadBlob(await zip.generateAsync({type:"blob",compression:"DEFLATE"}),`포토카드_앞뒷면_${new Date().toISOString().slice(0,10)}.zip`);batchStatus(`완료: ${ok}개 성공${fail?` · ${fail}개 실패`:""}`,!!fail,!fail)}catch(e){batchStatus("일괄 생성 실패: "+e.message,true)}finally{$("batchBtn").disabled=false}}
@@ -444,7 +525,28 @@ function renderExcelHead(){const h=$("excelDataHead");h.innerHTML=`<tr class="ex
 function renderExcelBody(){const b=$("excelDataBody"),rows=filtered();b.innerHTML=rows.length?rows.map(x=>`<tr data-id="${x.id}" class="${x.done?"done":""} ${x.id===selectedId?"selected":""}">${COLUMNS.map(c=>`<td>${esc(x.row[c])}</td>`).join("")}</tr>`).join(""):`<tr><td colspan="${COLUMNS.length}">불러온 엑셀 데이터가 없습니다.</td></tr>`;b.querySelectorAll("tr[data-id]").forEach(tr=>{tr.onclick=()=>selectExcel(tr.dataset.id);tr.ondblclick=()=>toggleDone(tr.dataset.id)})}
 function excelStatus(msg){$("excelDataStatus").textContent=msg||`표시 ${filtered().length}/${excelRows.length}행 · 완료 ${excelRows.filter(x=>x.done).length}행`}
 function sortExcel(c){if(sortCol===c)sortDesc=!sortDesc;else{sortCol=c;sortDesc=true}excelRows.sort((a,b)=>{const n=String(a.row[c]??"").localeCompare(String(b.row[c]??""),"ko-KR",{numeric:true});return sortDesc?-n:n});renderExcelHead();renderExcelBody();excelStatus()}
-function selectExcel(id){const x=excelRows.find(v=>v.id===id);if(!x)return;selectedId=id;const r=x.row;const tid=templateIdFromValue(r["템플릿"]);applyTemplateDefaults(tid,false);$("nameInput").value=r["이름"]||$("nameInput").value;$("groupSelect").value=groupIdFromValue(r["그룹"],$("groupSelect").value);applyColor("element",r["요소 컬러"]);applyColor("text",r["텍스트 컬러"]);if(String(r["배경 컬러"]||"").trim())applyBackgroundColor(r["배경 컬러"]);filenameEdited=!!r["저장파일명"];$("filenameInput").value=r["저장파일명"]?sanitize(r["저장파일명"]):defaultName();renderExcelBody();queue();excelStatus("설정 적용: "+(r["이름"]||"선택 행"))}
+async function selectExcel(id){
+  const x=excelRows.find(v=>v.id===id);if(!x)return;
+  selectedId=id;const r=x.row,tid=templateIdFromValue(r["템플릿"]);
+  applyTemplateDefaults(tid,false);
+  $("nameInput").value=r["이름"]||$("nameInput").value;
+  $("groupSelect").value=groupIdFromValue(r["그룹"],$("groupSelect").value);
+  applyColor("element",r["요소 컬러"]);
+  applyColor("text",r["텍스트 컬러"]);
+  if(String(r["배경 컬러"]||"").trim())applyBackgroundColor(r["배경 컬러"]);
+  filenameEdited=!!r["저장파일명"];
+  $("filenameInput").value=r["저장파일명"]?sanitize(r["저장파일명"]):defaultName();
+  let photoMsg="";
+  const imageName=String(r["이미지명"]||"").trim();
+  if(imageName){
+    const file=findExcelImage(imageName);
+    if(file){
+      try{await choosePhoto(file);photoMsg=" · 사진 자동 적용"}catch(e){photoMsg=" · 사진 적용 실패"}
+    }else photoMsg=excelImageFiles.length||batchFiles.length?" · 이미지 파일을 찾지 못함":" · 이미지 폴더를 연결하면 사진도 자동 적용";
+  }
+  renderExcelBody();queue();
+  excelStatus("설정 적용: "+(r["이름"]||"선택 행")+photoMsg)
+}
 function toggleDone(id){const x=excelRows.find(v=>v.id===id);if(x){x.done=!x.done;renderExcelBody();excelStatus()}}
 function markDone(){const x=excelRows.find(v=>v.id===selectedId);if(x){x.done=true;renderExcelBody();excelStatus()}}
 async function loadExcelPanel(file){if(!file)return;try{excelRows=(await parseExcel(file)).map((x,i)=>({id:"x"+x.excelRow+"_"+i,...x,done:false}));selectedId=null;sortCol=null;sortDesc=false;filters=Object.fromEntries(COLUMNS.map(c=>[c,""]));renderExcelHead();renderExcelBody();$("excelDataHint").textContent=`${file.name} · ${excelRows.length}행 불러옴 · 클릭=설정 적용 / 더블클릭=완료 토글`;excelStatus()}catch(e){excelStatus("엑셀 데이터 불러오기 실패: "+e.message)}}
@@ -530,7 +632,7 @@ function initWorkspaceResizer(){
   })
 }
 
-function bind(){bindRange("focusX",0,100);bindRange("focusY",0,100);bindRange("zoom",100,500);bindRange("frontLogoScale",40,200);bindRange("frontLogoX",0,650);bindRange("frontLogoY",0,1004);bindRange("backLogoScale",40,200);bindRange("backLogoX",0,650);bindRange("backLogoY",0,1004);bindRange("signatureScale",40,220);bindRange("signatureX",0,650);bindRange("signatureY",0,1004);bindGestures();$("photoInput").onchange=e=>choosePhoto(e.target.files?.[0]);$("cutoutBtn").onclick=doCutout;$("restorePhotoBtn").onclick=restoreOriginalPhoto;$("nameInput").oninput=()=>{maybeName();queue()};$("templateSelect").onchange=()=>{const id=$("templateSelect").value;recordTemplateRecent(id);applyTemplateDefaults(id,true)};$("openTemplateBrowserBtn").onclick=openTemplateBrowser;$("closeTemplateBrowserBtn").onclick=()=>$("templateBrowserDialog").close();$("templateSearchInput").oninput=renderTemplateBrowser;$("schoolNameInput").oninput=queue;$("trumpSuitSelect").onchange=()=>{syncTrumpPicker("suit");syncTrumpPicker("rank");queue()};$("trumpRankInput").oninput=queue;$("trumpSuitColorSelect").onchange=()=>{syncTrumpPicker("suit");queue()};$("trumpRankColorSelect").onchange=()=>{syncTrumpPicker("rank");queue()};$("trumpSuitColorPicker").oninput=()=>trumpPickerToSelect("suit");$("trumpRankColorPicker").oninput=()=>trumpPickerToSelect("rank");$("signatureInput").onchange=e=>chooseSignature(e.target.files?.[0]);$("clearSignatureBtn").onclick=clearSignature;$("groupSelect").onchange=()=>{templateThumbCache.clear();queue()};$("backStyleSelect").onchange=queue;$("fontSelect").onchange=queue;$("logoOutlineCheck").onchange=queue;$("logoShadowCheck").onchange=queue;$("elementColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("element");queue()};$("textColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("text");queue()};$("backgroundColorSelect").onchange=()=>{templateThumbCache.clear();syncBackgroundPicker();queue()};$("elementColorPicker").oninput=()=>pickerToSelect("element");$("textColorPicker").oninput=()=>pickerToSelect("text");$("backgroundColorPicker").oninput=backgroundPickerToSelect;["trackingInput","fontSizeInput","textXInput","textYInput","shadowCheck","strokeColorPicker","strokeWidthInput"].forEach(id=>$(id).oninput=queue);$("resetCropBtn").onclick=()=>{setLinked("focusX",50);setLinked("focusY",50);setLinked("zoom",100);queue()};$("resetTextBtn").onclick=()=>{Object.assign($("trackingInput"),{value:4});$("fontSizeInput").value=31;$("textXInput").value=325;$("textYInput").value=903;$("shadowCheck").checked=true;$("strokeColorPicker").value="#FFFFFF";$("strokeWidthInput").value=1;queue()};$("centerGuideCheck").oninput=updateGuide;$("frontTabBtn").onclick=()=>switchSide("front");$("backTabBtn").onclick=()=>switchSide("back");$("filenameInput").oninput=()=>filenameEdited=true;$("generateBtn").onclick=saveCurrent;$("savePairBtn").onclick=savePair;$("savePathBtn").onclick=pickFolder;$("presetSelect").onchange=onPresetSelectionChange;$("applyPresetBtn").onclick=applySelectedPreset;$("savePresetBtn").onclick=saveNewPreset;$("overwritePresetBtn").onclick=overwriteSelectedPreset;$("renamePresetBtn").onclick=renameSelectedPreset;$("deletePresetBtn").onclick=deleteSelectedPreset;$("presetNameInput").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveNewPreset()}};$("saveDefaultsBtn").onclick=saveCurrentTemplateDefaults;$("resetDefaultsBtn").onclick=resetCurrentTemplateDefaults;$("sampleExcelBtn").onclick=sampleExcel;$("excelTemplateDownloadBtn").onclick=sampleExcel;$("excelInput").onchange=prepareBatch;$("imageFolderInput").onchange=prepareBatch;$("batchBtn").onclick=runBatch;$("excelDataLoadBtn").onclick=()=>$("excelDataInput").click();$("excelDataInput").onchange=e=>loadExcelPanel(e.target.files?.[0]);$("excelProgressSaveBtn").onclick=saveProgress;$("openColorManagerBtn").onclick=openColorManager;$("addCustomColorBtn").onclick=saveCustomColor;$("customColorPicker").oninput=e=>$("customColorHex").value=e.target.value.toUpperCase();$("customColorHex").oninput=e=>{const v=normalizeHex(e.target.value);if(v)$("customColorPicker").value=v}}
+function bind(){bindRange("focusX",0,100);bindRange("focusY",0,100);bindRange("zoom",100,500);bindRange("frontLogoScale",40,200);bindRange("frontLogoX",0,650);bindRange("frontLogoY",0,1004);bindRange("backLogoScale",40,200);bindRange("backLogoX",0,650);bindRange("backLogoY",0,1004);bindRange("signatureScale",40,220);bindRange("signatureX",0,650);bindRange("signatureY",0,1004);bindGestures();$("photoInput").onchange=e=>choosePhoto(e.target.files?.[0]);$("cutoutBtn").onclick=doCutout;$("restorePhotoBtn").onclick=restoreOriginalPhoto;$("nameInput").oninput=()=>{maybeName();queue()};$("templateSelect").onchange=()=>{const id=$("templateSelect").value;recordTemplateRecent(id);applyTemplateDefaults(id,true)};$("openTemplateBrowserBtn").onclick=openTemplateBrowser;$("closeTemplateBrowserBtn").onclick=()=>$("templateBrowserDialog").close();$("templateSearchInput").oninput=renderTemplateBrowser;$("schoolNameInput").oninput=queue;$("trumpSuitSelect").onchange=()=>{syncTrumpPicker("suit");syncTrumpPicker("rank");queue()};$("trumpRankInput").oninput=queue;$("trumpSuitColorSelect").onchange=()=>{syncTrumpPicker("suit");queue()};$("trumpRankColorSelect").onchange=()=>{syncTrumpPicker("rank");queue()};$("trumpSuitColorPicker").oninput=()=>trumpPickerToSelect("suit");$("trumpRankColorPicker").oninput=()=>trumpPickerToSelect("rank");$("signatureInput").onchange=e=>chooseSignature(e.target.files?.[0]);$("clearSignatureBtn").onclick=clearSignature;$("groupSelect").onchange=()=>{templateThumbCache.clear();queue()};$("backStyleSelect").onchange=queue;$("fontSelect").onchange=queue;$("logoOutlineCheck").onchange=queue;$("logoShadowCheck").onchange=queue;$("elementColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("element");queue()};$("textColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("text");queue()};$("backgroundColorSelect").onchange=()=>{templateThumbCache.clear();syncBackgroundPicker();queue()};$("elementColorPicker").oninput=()=>pickerToSelect("element");$("textColorPicker").oninput=()=>pickerToSelect("text");$("backgroundColorPicker").oninput=backgroundPickerToSelect;["trackingInput","fontSizeInput","textXInput","textYInput","shadowCheck","strokeColorPicker","strokeWidthInput"].forEach(id=>$(id).oninput=queue);$("resetCropBtn").onclick=()=>{setLinked("focusX",50);setLinked("focusY",50);setLinked("zoom",100);queue()};$("resetTextBtn").onclick=()=>{Object.assign($("trackingInput"),{value:4});$("fontSizeInput").value=31;$("textXInput").value=325;$("textYInput").value=903;$("shadowCheck").checked=true;$("strokeColorPicker").value="#FFFFFF";$("strokeWidthInput").value=1;queue()};$("centerGuideCheck").oninput=updateGuide;$("frontTabBtn").onclick=()=>switchSide("front");$("backTabBtn").onclick=()=>switchSide("back");$("filenameInput").oninput=()=>filenameEdited=true;$("generateBtn").onclick=saveCurrent;$("savePairBtn").onclick=savePair;$("savePathBtn").onclick=pickFolder;$("presetSelect").onchange=onPresetSelectionChange;$("applyPresetBtn").onclick=applySelectedPreset;$("savePresetBtn").onclick=saveNewPreset;$("overwritePresetBtn").onclick=overwriteSelectedPreset;$("renamePresetBtn").onclick=renameSelectedPreset;$("deletePresetBtn").onclick=deleteSelectedPreset;$("presetNameInput").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveNewPreset()}};$("saveDefaultsBtn").onclick=saveCurrentTemplateDefaults;$("resetDefaultsBtn").onclick=resetCurrentTemplateDefaults;$("sampleExcelBtn").onclick=sampleExcel;$("excelTemplateDownloadBtn").onclick=sampleExcel;$("excelImageFolderBtn").onclick=()=>$("excelImageFolderInput").click();$("excelImageFolderInput").onchange=e=>connectExcelImageFolder(e.target.files);$("excelInput").onchange=prepareBatch;$("imageFolderInput").onchange=prepareBatch;$("batchBtn").onclick=runBatch;$("excelDataLoadBtn").onclick=()=>$("excelDataInput").click();$("excelDataInput").onchange=e=>loadExcelPanel(e.target.files?.[0]);$("excelProgressSaveBtn").onclick=saveProgress;$("openColorManagerBtn").onclick=openColorManager;$("addCustomColorBtn").onclick=saveCustomColor;$("customColorPicker").oninput=e=>$("customColorHex").value=e.target.value.toUpperCase();$("customColorHex").oninput=e=>{const v=normalizeHex(e.target.value);if(v)$("customColorPicker").value=v}}
 async function registerModelCacheWorker(){if(!("serviceWorker" in navigator))return;try{await navigator.serviceWorker.register("./service-worker.js",{scope:"./"});await navigator.serviceWorker.ready}catch(e){console.warn("모델 캐시 서비스 워커 등록 실패:",e)}}
 async function init(){registerModelCacheWorker();initWorkspaceResizer();initFonts();initTemplates();$("fontSelect").value="Playfair Display";$("logoOutlineCheck").checked=true;$("logoShadowCheck").checked=true;initColors();initGroups();updateTemplateExtras();bind();renderExcelHead();renderExcelBody();restoreProgress();const saved=loadJson(STORAGE_KEY,null);applyTemplateDefaults("ribbon",false);if(saved?.name)$("nameInput").value=saved.name;maybeName(true);saveDir=await loadHandle();pathText();switchSide("front");status("준비 완료. 사진을 선택하세요.",false,true);loadAsset(GROUPS.IVE.logo).catch(()=>{})}
 init();
