@@ -25,7 +25,10 @@ export const FONT_REGISTRY=[
   {name:"Pacifico",family:'"Pacifico",cursive',category:"script"},
   {name:"Dancing Script",family:'"Dancing Script",cursive',category:"script"},
   {name:"Allura",family:'"Allura",cursive',category:"script"},
-  {name:"Sacramento",family:'"Sacramento",cursive',category:"script"}
+  {name:"Sacramento",family:'"Sacramento",cursive',category:"script"},
+  {name:"Caveat",family:'"Caveat",cursive',category:"script"},
+  {name:"Parisienne",family:'"Parisienne",cursive',category:"script"},
+  {name:"Satisfy",family:'"Satisfy",cursive',category:"script"}
 ];
 export const FONT_MAP=Object.fromEntries(FONT_REGISTRY.map(x=>[x.name,x.family]));
 
@@ -106,15 +109,70 @@ export const TEMPLATE_REGISTRY={
     defaults:common({font:"Poppins",fontSize:38,tracking:3,textX:155,textY:862,frontLogoX:132,frontLogoY:106,frontLogoScale:78,backLogoX:390,backLogoY:502}),
     extras:[],front:"split",back:"split"
   },
+  gradient_glow:{
+    id:"gradient_glow",label:"17. Gradient Glow",category:"glow",
+    defaults:common({font:"Poppins",fontSize:40,tracking:3,textX:325,textY:902,frontLogoX:325,frontLogoY:72,frontLogoScale:74}),
+    extras:[],front:"gradient_glow",back:"gradient_glow"
+  },
+  neon:{
+    id:"neon",label:"18. Neon Sign",category:"glow",
+    defaults:common({font:"Unbounded",fontSize:30,tracking:2,textX:325,textY:910,frontLogoX:325,frontLogoY:74,frontLogoScale:72}),
+    extras:[],front:"neon",back:"neon"
+  },
+  scrapbook:{
+    id:"scrapbook",label:"19. Scrapbook",category:"paper",
+    defaults:common({font:"Caveat",fontSize:48,tracking:1,textX:325,textY:876,frontLogoX:548,frontLogoY:86,frontLogoScale:72}),
+    extras:[],front:"scrapbook",back:"scrapbook"
+  },
+  diary:{
+    id:"diary",label:"20. Diary / Notebook",category:"paper",
+    defaults:common({font:"Satisfy",fontSize:44,tracking:1,textX:342,textY:864,frontLogoX:510,frontLogoY:82,frontLogoScale:68}),
+    extras:[],front:"diary",back:"diary"
+  },
+  love_letter:{
+    id:"love_letter",label:"21. Love Letter",category:"romantic",
+    defaults:common({font:"Parisienne",fontSize:50,tracking:1,textX:325,textY:884,frontLogoX:518,frontLogoY:84,frontLogoScale:68}),
+    extras:[],front:"love_letter",back:"love_letter"
+  },
   student_id:{
     id:"student_id",label:"22. Student ID",category:"special",
     defaults:common({font:"Montserrat",fontSize:42,tracking:5,textX:325,textY:753,backStyle:"center",frontLogoX:82,frontLogoY:920,frontLogoScale:82,backLogoScale:100,schoolName:"아이브고등학교"}),
     extras:["schoolName"],front:"student_id",back:"student_id"
   },
+  concert_ticket:{
+    id:"concert_ticket",label:"23. Concert Ticket",category:"ticket",
+    defaults:common({font:"Bebas Neue",fontSize:43,tracking:4,textX:392,textY:888,frontLogoX:401,frontLogoY:84,frontLogoScale:72}),
+    extras:[],front:"concert_ticket",back:"concert_ticket"
+  },
+  album_tracklist:{
+    id:"album_tracklist",label:"24. Album Tracklist",category:"music",
+    defaults:common({font:"Space Grotesk",fontSize:38,tracking:2,textX:325,textY:817,frontLogoX:325,frontLogoY:908,frontLogoScale:72}),
+    extras:[],front:"album_tracklist",back:"album_tracklist"
+  },
+  starry_night:{
+    id:"starry_night",label:"25. Starry Night",category:"night",
+    defaults:common({font:"Cormorant Garamond",fontSize:48,tracking:4,textX:325,textY:902,frontLogoX:325,frontLogoY:74,frontLogoScale:70}),
+    extras:[],front:"starry_night",back:"starry_night"
+  },
+  butterfly:{
+    id:"butterfly",label:"26. Butterfly",category:"soft",
+    defaults:common({font:"Parisienne",fontSize:48,tracking:1,textX:325,textY:900,frontLogoX:325,frontLogoY:72,frontLogoScale:70}),
+    extras:[],front:"butterfly",back:"butterfly"
+  },
+  cherry_strawberry:{
+    id:"cherry_strawberry",label:"27. Cherry / Strawberry",category:"cute",
+    defaults:common({font:"Quicksand",fontSize:39,tracking:3,textX:325,textY:904,frontLogoX:325,frontLogoY:72,frontLogoScale:70}),
+    extras:[],front:"cherry_strawberry",back:"cherry_strawberry"
+  },
   trump:{
     id:"trump",label:"40. Trump Card",category:"special",
     defaults:common({font:"Playfair Display",fontSize:34,tracking:4,textX:325,textY:910,backStyle:"center",frontLogoX:572,frontLogoY:72,frontLogoScale:72,trumpSuit:"diamond",trumpRank:"A",trumpSuitColor:"auto",trumpRankColor:"auto"}),
     extras:["trumpOptions"],front:"trump",back:"trump"
+  },
+  dressing_mirror:{
+    id:"dressing_mirror",label:"41. Dressing Room Mirror",category:"showbiz",
+    defaults:common({font:"Bodoni Moda",fontSize:40,tracking:3,textX:325,textY:893,frontLogoX:325,frontLogoY:812,frontLogoScale:66,backLogoX:325,backLogoY:502}),
+    extras:[],front:"dressing_mirror",back:"dressing_mirror"
   },
   signature:{
     id:"signature",label:"39. Signature",category:"special",
