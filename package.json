@@ -1,0 +1,9 @@
+{
+  "name": "photocard-maker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node qa-static.mjs",
+    "qa": "node qa-static.mjs"
+  }
+}
