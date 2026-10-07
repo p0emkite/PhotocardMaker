@@ -131,7 +131,7 @@ export const TEMPLATE_REGISTRY={
   },
   love_letter:{
     id:"love_letter",label:"21. Love Letter",category:"romantic",
-    defaults:common({font:"Parisienne",fontSize:50,tracking:1,textX:325,textY:884,frontLogoX:518,frontLogoY:84,frontLogoScale:68}),
+    defaults:common({font:"Parisienne",fontSize:50,tracking:1,textX:325,textY:884,frontLogoX:518,frontLogoY:84,frontLogoScale:68,backLogoY:544}),
     extras:[],front:"love_letter",back:"love_letter"
   },
   student_id:{
@@ -141,12 +141,12 @@ export const TEMPLATE_REGISTRY={
   },
   concert_ticket:{
     id:"concert_ticket",label:"23. Concert Ticket",category:"ticket",
-    defaults:common({font:"Bebas Neue",fontSize:43,tracking:4,textX:392,textY:888,frontLogoX:401,frontLogoY:84,frontLogoScale:72}),
+    defaults:common({font:"Bebas Neue",fontSize:43,tracking:4,textX:392,textY:888,frontLogoX:401,frontLogoY:84,frontLogoScale:72,backLogoX:400,backLogoY:502}),
     extras:[],front:"concert_ticket",back:"concert_ticket"
   },
   album_tracklist:{
     id:"album_tracklist",label:"24. Album Tracklist",category:"music",
-    defaults:common({font:"Space Grotesk",fontSize:38,tracking:2,textX:325,textY:817,frontLogoX:325,frontLogoY:908,frontLogoScale:72}),
+    defaults:common({font:"Space Grotesk",fontSize:38,tracking:2,textX:325,textY:817,frontLogoX:325,frontLogoY:908,frontLogoScale:72,backLogoY:892}),
     extras:[],front:"album_tracklist",back:"album_tracklist"
   },
   starry_night:{
@@ -171,7 +171,7 @@ export const TEMPLATE_REGISTRY={
   },
   dressing_mirror:{
     id:"dressing_mirror",label:"41. Dressing Room Mirror",category:"showbiz",
-    defaults:common({font:"Bodoni Moda",fontSize:40,tracking:3,textX:325,textY:893,frontLogoX:325,frontLogoY:812,frontLogoScale:66,backLogoX:325,backLogoY:502}),
+    defaults:common({font:"Bodoni Moda",fontSize:40,tracking:3,textX:325,textY:893,frontLogoX:325,frontLogoY:812,frontLogoScale:66,backLogoX:325,backLogoY:430}),
     extras:[],front:"dressing_mirror",back:"dressing_mirror"
   },
   signature:{
@@ -533,7 +533,7 @@ async function frontConcertTicket(e){
   ctx.save();ctx.fillStyle="rgba(10,10,12,.58)";ctx.beginPath();ctx.roundRect(190,H-150,W-244,96,16);ctx.fill();ctx.restore();e.name({x:c.textX,y:c.textY,maxWidth:335,size:c.fontSize,font:c.font,fill:c.text,stroke:"#111111",shadow:true})
 }
 async function backConcertTicket(e){
-  const {ctx,W,H,c}=e;e.backBase("#F7F2EA");ctx.save();ctx.fillStyle=c.element;ctx.fillRect(0,0,150,H);ctx.restore();ctx.save();ctx.setLineDash([8,10]);ctx.strokeStyle="rgba(80,70,60,.35)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(150,34);ctx.lineTo(150,H-34);ctx.stroke();ctx.restore();barcode(ctx,44,H-220,70,132,"rgba(255,255,255,.90)");await e.backLogo({maxWidth:230,cx:400,cy:H/2})
+  const {ctx,W,H,c}=e;e.backBase("#F7F2EA");ctx.save();ctx.fillStyle=c.element;ctx.fillRect(0,0,150,H);ctx.restore();ctx.save();ctx.setLineDash([8,10]);ctx.strokeStyle="rgba(80,70,60,.35)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(150,34);ctx.lineTo(150,H-34);ctx.stroke();ctx.restore();barcode(ctx,44,H-220,70,132,"rgba(255,255,255,.90)");await e.backLogo({maxWidth:230})
 }
 
 async function frontAlbumTracklist(e){
@@ -543,7 +543,7 @@ async function frontAlbumTracklist(e){
   e.name({x:c.textX,y:c.textY,maxWidth:470,size:c.fontSize,font:c.font,fill:"#242424",stroke:"#F2F0EC",shadow:false});await e.logo({w:68,effects:true})
 }
 async function backAlbumTracklist(e){
-  const {ctx,W,H,c}=e;e.backBase("#F2F0EC");centeredText(ctx,"SIDE B",W/2,116,'600 15px "Space Grotesk",sans-serif',rgba(c.element,.72),4);for(let i=0;i<8;i++){const y=190+i*68;centeredText(ctx,String(i+1).padStart(2,"0"),95,y,'500 13px "Space Grotesk",sans-serif',rgba(c.element,.55),1);line(ctx,135,y,W-72,y,rgba(c.element,.28),1)}await e.backLogo({maxWidth:180,cy:H-112})
+  const {ctx,W,H,c}=e;e.backBase("#F2F0EC");centeredText(ctx,"SIDE B",W/2,116,'600 15px "Space Grotesk",sans-serif',rgba(c.element,.72),4);for(let i=0;i<8;i++){const y=190+i*68;centeredText(ctx,String(i+1).padStart(2,"0"),95,y,'500 13px "Space Grotesk",sans-serif',rgba(c.element,.55),1);line(ctx,135,y,W-72,y,rgba(c.element,.28),1)}await e.backLogo({maxWidth:180})
 }
 
 async function frontStarryNight(e){
@@ -568,7 +568,7 @@ async function backButterfly(e){
 async function frontCherryStrawberry(e){
   const {ctx,W,H,c}=e;e.photoRect(0,0,W,H,e.R);ctx.save();const g=ctx.createLinearGradient(0,H-230,0,H);g.addColorStop(0,"rgba(255,255,255,0)");g.addColorStop(1,"rgba(255,248,244,.66)");ctx.fillStyle=g;ctx.fillRect(0,H-260,W,260);ctx.restore();
   cherryIcon(ctx,82,134,60,"#D91E4B","#4E9B5B");strawberryIcon(ctx,W-92,170,66,"#E73F61","#4E9B5B");cherryIcon(ctx,W-86,H-198,48,"#D91E4B","#4E9B5B");strawberryIcon(ctx,96,H-190,52,"#E73F61","#4E9B5B");
-  ctx.save();ctx.globalAlpha=.20;checker(ctx,0,H-120,W,120,28,rgba(c.element,.92),"rgba(255,255,255,.95)",1);ctx.restore();await e.logo({w:68,effects:true});e.name({x:c.textX,y:c.textY,maxWidth:440,size:c.fontSize,font:c.font,fill:"#5B2D38",stroke:"#FFF7F3",shadow:false})
+  checker(ctx,0,H-120,W,120,28,rgba(c.element,.92),"rgba(255,255,255,.95)",.20);await e.logo({w:68,effects:true});e.name({x:c.textX,y:c.textY,maxWidth:440,size:c.fontSize,font:c.font,fill:"#5B2D38",stroke:"#FFF7F3",shadow:false})
 }
 async function backCherryStrawberry(e){
   const {ctx,W,H,c}=e;e.backBase("#FFF7F3");checker(ctx,0,0,W,H,46,rgba(c.element,.18),"rgba(255,255,255,.82)",1);for(const [x,y,k] of [[90,130,0],[W-92,154,1],[126,780,1],[W-116,820,0]])k?strawberryIcon(ctx,x,y,58):cherryIcon(ctx,x,y,56);ctx.save();ctx.fillStyle="rgba(255,255,255,.82)";ctx.beginPath();ctx.roundRect(105,325,W-210,354,48);ctx.fill();ctx.restore();await e.backLogo({maxWidth:220})
@@ -584,7 +584,7 @@ async function frontDressingMirror(e){
 }
 async function backDressingMirror(e){
   const {ctx,W,H,c}=e;e.backBase("#25211F");ctx.save();ctx.shadowColor="rgba(0,0,0,.55)";ctx.shadowBlur=26;e.fillRound(34,28,W-68,790,24,lighten(c.element,.78));ctx.restore();e.fillRound(78,76,W-156,690,8,"#B8B2AC");
-  ctx.save();const g=ctx.createLinearGradient(88,86,W-88,756);g.addColorStop(0,"rgba(255,255,255,.70)");g.addColorStop(.45,"rgba(255,255,255,.15)");g.addColorStop(1,"rgba(55,62,68,.18)");ctx.fillStyle=g;ctx.fillRect(88,86,W-176,670);ctx.restore();dressingBulbs(ctx,W,H,c.element);strokeRound(ctx,34,28,W-68,790,24,rgba(c.element,.60),2);await e.backLogo({maxWidth:220,cx:c.backLogoX,cy:430})
+  ctx.save();const g=ctx.createLinearGradient(88,86,W-88,756);g.addColorStop(0,"rgba(255,255,255,.70)");g.addColorStop(.45,"rgba(255,255,255,.15)");g.addColorStop(1,"rgba(55,62,68,.18)");ctx.fillStyle=g;ctx.fillRect(88,86,W-176,670);ctx.restore();dressingBulbs(ctx,W,H,c.element);strokeRound(ctx,34,28,W-68,790,24,rgba(c.element,.60),2);await e.backLogo({maxWidth:220})
 }
 
 async function frontPolaroid(e){
