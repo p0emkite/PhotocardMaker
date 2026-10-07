@@ -285,8 +285,22 @@ function bubbleCircle(ctx,x,y,r,color,alpha=.34){
 function acrylicScrew(ctx,x,y,r,color){
   ctx.save();ctx.fillStyle="rgba(255,255,255,.72)";ctx.strokeStyle=rgba(color,.62);ctx.lineWidth=1.4;ctx.shadowColor="rgba(0,0,0,.18)";ctx.shadowBlur=5;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;line(ctx,x-r*.45,y,x+r*.45,y,rgba(color,.70),1);ctx.restore()
 }
-function chromeGradient(ctx,x0,y0,x1,y1){
-  const g=ctx.createLinearGradient(x0,y0,x1,y1);g.addColorStop(0,"#52565B");g.addColorStop(.16,"#F8FBFF");g.addColorStop(.34,"#8B929A");g.addColorStop(.52,"#FFFFFF");g.addColorStop(.70,"#6A7077");g.addColorStop(.86,"#F5F7F9");g.addColorStop(1,"#44494E");return g
+function mixHex(a,b,ratio=.5){
+  const A=String(a||"#000000").replace("#","").padEnd(6,"0"),B=String(b||"#000000").replace("#","").padEnd(6,"0");
+  const ch=i=>Math.round((parseInt(A.slice(i,i+2),16)||0)*(1-ratio)+(parseInt(B.slice(i,i+2),16)||0)*ratio);
+  return `rgb(${ch(0)},${ch(2)},${ch(4)})`
+}
+function chromeGradient(ctx,x0,y0,x1,y1,tint="#C7CDD4"){
+  const g=ctx.createLinearGradient(x0,y0,x1,y1);
+  g.addColorStop(0,mixHex("#44494E",tint,.32));
+  g.addColorStop(.14,mixHex("#F9FCFF",tint,.12));
+  g.addColorStop(.30,mixHex("#7D858D",tint,.42));
+  g.addColorStop(.47,mixHex("#FFFFFF",tint,.10));
+  g.addColorStop(.62,mixHex("#5A6168",tint,.46));
+  g.addColorStop(.79,mixHex("#F7FAFD",tint,.16));
+  g.addColorStop(.90,mixHex("#8A929A",tint,.38));
+  g.addColorStop(1,mixHex("#3D4247",tint,.34));
+  return g
 }
 function speedLines(ctx,W,H,color){
   ctx.save();ctx.strokeStyle=color;ctx.lineCap="round";for(let i=0;i<10;i++){const y=170+i*58,x=20+(i%3)*18,len=78+(i%4)*30;ctx.globalAlpha=.18+(i%3)*.08;ctx.lineWidth=2+(i%2);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+len,y-18);ctx.stroke()}ctx.restore()
@@ -724,8 +738,17 @@ async function frontDressingMirror(e){
   await e.logo({w:64,effects:false});e.name({x:c.textX,y:c.textY,maxWidth:380,size:c.fontSize,font:c.font,fill:"#3B3028",stroke:"#FFFFFF",shadow:false})
 }
 async function backDressingMirror(e){
-  const {ctx,W,H,c}=e;e.backBase("#25211F");ctx.save();ctx.shadowColor="rgba(0,0,0,.55)";ctx.shadowBlur=26;e.fillRound(34,28,W-68,790,24,lighten(c.element,.78));ctx.restore();e.fillRound(78,76,W-156,690,8,"#B8B2AC");
-  ctx.save();const g=ctx.createLinearGradient(88,86,W-88,756);g.addColorStop(0,"rgba(255,255,255,.70)");g.addColorStop(.45,"rgba(255,255,255,.15)");g.addColorStop(1,"rgba(55,62,68,.18)");ctx.fillStyle=g;ctx.fillRect(88,86,W-176,670);ctx.restore();dressingBulbs(ctx,W,H,c.element,10);strokeRound(ctx,34,28,W-68,790,24,rgba(c.element,.60),2);await e.backLogo({maxWidth:220})
+  const {ctx,W,H,c}=e;e.backBase("#25211F");
+  // One continuous vanity mirror frame: no detached lower dark strip.
+  ctx.save();ctx.shadowColor="rgba(0,0,0,.55)";ctx.shadowBlur=26;ctx.shadowOffsetY=7;e.fillRound(34,28,W-68,H-56,24,lighten(c.element,.78));ctx.restore();
+  e.fillRound(78,76,W-156,H-152,10,"#B8B2AC");
+  ctx.save();const g=ctx.createLinearGradient(88,86,W-88,H-86);g.addColorStop(0,"rgba(255,255,255,.72)");g.addColorStop(.42,"rgba(255,255,255,.16)");g.addColorStop(1,"rgba(55,62,68,.18)");ctx.fillStyle=g;ctx.beginPath();ctx.roundRect(88,86,W-176,H-172,6);ctx.fill();ctx.restore();
+  // Bulbs now wrap the full top, bottom, left and right perimeter.
+  const left=54,right=W-54,top=56,bottom=H-56,r=12;
+  for(let x=98;x<=W-98;x+=72){bulb(ctx,x,top,r,c.element);bulb(ctx,x,bottom,r,c.element)}
+  for(let y=126;y<=H-126;y+=78){bulb(ctx,left,y,r,c.element);bulb(ctx,right,y,r,c.element)}
+  strokeRound(ctx,34,28,W-68,H-56,24,rgba(c.element,.60),2);
+  await e.backLogo({maxWidth:220,cx:c.backLogoX??W/2,cy:c.backLogoY??H/2})
 }
 
 
@@ -757,12 +780,17 @@ async function backBubblePop(e){
 }
 
 async function frontGlassAcrylic(e){
-  const {ctx,W,H,c}=e;e.photoRect(0,0,W,H,e.R);
-  ctx.save();ctx.fillStyle="rgba(255,255,255,.14)";ctx.fillRect(0,0,W,H);ctx.restore();
-  ctx.save();ctx.fillStyle="rgba(255,255,255,.30)";ctx.strokeStyle="rgba(255,255,255,.72)";ctx.lineWidth=1.8;ctx.shadowColor="rgba(0,0,0,.18)";ctx.shadowBlur=18;ctx.beginPath();ctx.roundRect(38,38,W-76,H-76,30);ctx.fill();ctx.stroke();ctx.restore();
-  ctx.save();const g=ctx.createLinearGradient(38,38,W-38,H-38);g.addColorStop(0,"rgba(255,255,255,.36)");g.addColorStop(.35,"rgba(255,255,255,.04)");g.addColorStop(.7,"rgba(255,255,255,.20)");g.addColorStop(1,"rgba(255,255,255,.05)");ctx.fillStyle=g;ctx.beginPath();ctx.roundRect(50,50,W-100,H-100,24);ctx.fill();ctx.restore();
+  const {ctx,W,H,c}=e;
+  e.backBase("#E8EEF2");
+  // Acrylic slab sits on top of the chosen background colour.
+  ctx.save();ctx.fillStyle="rgba(255,255,255,.26)";ctx.strokeStyle="rgba(255,255,255,.78)";ctx.lineWidth=2;ctx.shadowColor="rgba(0,0,0,.20)";ctx.shadowBlur=18;ctx.shadowOffsetY=5;ctx.beginPath();ctx.roundRect(38,38,W-76,H-76,30);ctx.fill();ctx.stroke();ctx.restore();
+  // Photo is clipped strictly to the inner glass display area.
+  e.photoRect(72,72,W-144,H-236,20);
+  ctx.save();ctx.strokeStyle="rgba(255,255,255,.76)";ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(72,72,W-144,H-236,20);ctx.stroke();ctx.restore();
+  // Glass reflection stays inside the photo window.
+  ctx.save();const g=ctx.createLinearGradient(72,72,W-72,H-164);g.addColorStop(0,"rgba(255,255,255,.38)");g.addColorStop(.30,"rgba(255,255,255,.05)");g.addColorStop(.66,"rgba(255,255,255,.18)");g.addColorStop(1,"rgba(255,255,255,.04)");ctx.fillStyle=g;ctx.beginPath();ctx.roundRect(72,72,W-144,H-236,20);ctx.fill();ctx.restore();
   for(const [x,y] of [[66,66],[W-66,66],[66,H-66],[W-66,H-66]])acrylicScrew(ctx,x,y,10,c.element);
-  ctx.save();ctx.fillStyle="rgba(255,255,255,.54)";ctx.beginPath();ctx.roundRect(92,H-166,W-184,102,26);ctx.fill();ctx.restore();
+  ctx.save();ctx.fillStyle="rgba(255,255,255,.58)";ctx.strokeStyle="rgba(255,255,255,.72)";ctx.lineWidth=1.2;ctx.shadowColor="rgba(0,0,0,.14)";ctx.shadowBlur=8;ctx.beginPath();ctx.roundRect(92,H-150,W-184,84,24);ctx.fill();ctx.stroke();ctx.restore();
   await e.logo({w:66,effects:true});e.name({x:c.textX,y:c.textY,maxWidth:420,size:c.fontSize,font:c.font,fill:"#FFFFFF",stroke:"rgba(30,30,30,.42)",shadow:true})
 }
 async function backGlassAcrylic(e){
@@ -772,16 +800,17 @@ async function backGlassAcrylic(e){
 }
 
 async function frontChrome(e){
-  const {ctx,W,H,c}=e;e.photoRect(0,0,W,H,e.R);ctx.save();ctx.fillStyle="rgba(5,7,10,.16)";ctx.fillRect(0,0,W,H);ctx.restore();
-  ctx.save();ctx.strokeStyle=chromeGradient(ctx,0,0,W,H);ctx.lineWidth=12;ctx.shadowColor="rgba(255,255,255,.24)";ctx.shadowBlur=8;ctx.beginPath();ctx.roundRect(16,16,W-32,H-32,28);ctx.stroke();ctx.restore();
-  ctx.save();ctx.fillStyle=chromeGradient(ctx,80,H-174,W-80,H-70);ctx.shadowColor="rgba(0,0,0,.25)";ctx.shadowBlur=10;ctx.beginPath();ctx.roundRect(80,H-170,W-160,108,24);ctx.fill();ctx.restore();
-  for(const [x,y,s] of [[72,126,16],[W-72,180,22],[95,H-250,15],[W-88,H-222,18]])star(ctx,x,y,s,s*.32,"#F7F9FA",.2,4);
+  const {ctx,W,H,c}=e;e.photoRect(0,0,W,H,e.R);ctx.save();ctx.fillStyle="rgba(5,7,10,.14)";ctx.fillRect(0,0,W,H);ctx.restore();
+  ctx.save();ctx.strokeStyle=chromeGradient(ctx,0,0,W,H,c.element);ctx.lineWidth=12;ctx.shadowColor=rgba(c.element,.30);ctx.shadowBlur=11;ctx.beginPath();ctx.roundRect(16,16,W-32,H-32,28);ctx.stroke();ctx.restore();
+  ctx.save();ctx.fillStyle=chromeGradient(ctx,80,H-174,W-80,H-70,c.element);ctx.shadowColor="rgba(0,0,0,.25)";ctx.shadowBlur=10;ctx.beginPath();ctx.roundRect(80,H-170,W-160,108,24);ctx.fill();ctx.restore();
+  for(const [x,y,s] of [[72,126,16],[W-72,180,22],[95,H-250,15],[W-88,H-222,18]])star(ctx,x,y,s,s*.32,mixHex("#FFFFFF",c.element,.18),.2,4);
   await e.logo({w:66,effects:true});e.name({x:c.textX,y:c.textY,maxWidth:430,size:c.fontSize,font:c.font,fill:"#1D2025",stroke:"#FFFFFF",shadow:false})
 }
 async function backChrome(e){
-  const {ctx,W,H,c}=e;e.backBase("#171A1E");ctx.save();ctx.fillStyle=chromeGradient(ctx,0,0,W,H);ctx.beginPath();ctx.roundRect(24,24,W-48,H-48,26);ctx.fill();ctx.restore();
-  ctx.save();ctx.fillStyle="#24282D";ctx.beginPath();ctx.roundRect(46,46,W-92,H-92,20);ctx.fill();ctx.restore();
-  star(ctx,92,126,18,6,"#F8FAFB",.2,4);star(ctx,W-94,H-124,22,7,"#F8FAFB",.2,4);await e.backLogo({maxWidth:225})
+  const {ctx,W,H,c}=e;e.backBase("#171A1E");
+  ctx.save();ctx.fillStyle=chromeGradient(ctx,0,0,W,H,c.element);ctx.beginPath();ctx.roundRect(24,24,W-48,H-48,26);ctx.fill();ctx.restore();
+  ctx.save();ctx.fillStyle=(c.background&&c.background!=="auto")?c.background:mixHex("#24282D",c.element,.12);ctx.beginPath();ctx.roundRect(46,46,W-92,H-92,20);ctx.fill();ctx.restore();
+  star(ctx,92,126,18,6,mixHex("#FFFFFF",c.element,.16),.2,4);star(ctx,W-94,H-124,22,7,mixHex("#FFFFFF",c.element,.16),.2,4);await e.backLogo({maxWidth:225})
 }
 
 async function frontRacing(e){
@@ -954,10 +983,28 @@ async function frontTrump(e){
   e.name({x:c.textX,y:c.textY,maxWidth:430,size:c.fontSize,font:c.font,fill:"#111111",stroke:"#FFFFFF",shadow:false})
 }
 async function backTrump(e){
-  const {ctx,W,H,c}=e,{symbol,color:baseColor}=suitInfo(c.trumpSuit),suitColor=overrideColor(c.trumpSuitColor,baseColor);e.backBase("#FFFDFC");
-  ctx.save();ctx.strokeStyle="#111";ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(14,14,W-28,H-28,38);ctx.stroke();ctx.fillStyle=suitColor;ctx.globalAlpha=.92;
-  for(let y=95,row=0;y<H;y+=112,row++)for(let x=60;x<W;x+=110){ctx.save();ctx.translate(x+(row%2?55:0),y);ctx.rotate(-Math.PI/7);ctx.font='700 58px Georgia,serif';ctx.textAlign="center";ctx.fillText(symbol,0,0);ctx.restore()}ctx.restore();
-  await e.backLogo({maxWidth:210})
+  const {ctx,W,H,c}=e;e.backBase("#FDFDFB");
+  // Classic double-border card back.
+  strokeRound(ctx,16,16,W-32,H-32,34,"#111111",3);
+  strokeRound(ctx,29,29,W-58,H-58,28,"#111111",1.5);
+  strokeRound(ctx,54,54,W-108,H-108,18,"#111111",2.2);
+  strokeRound(ctx,72,72,W-144,H-144,14,"#111111",1.2);
+  // Ornamental border band: small diamonds and beads, intentionally generic rather than brand-specific.
+  ctx.save();ctx.fillStyle="#111111";ctx.strokeStyle="#111111";
+  for(let x=86;x<=W-86;x+=22){ctx.save();ctx.translate(x,64);ctx.rotate(Math.PI/4);ctx.fillRect(-3.2,-3.2,6.4,6.4);ctx.restore();ctx.save();ctx.translate(x,H-64);ctx.rotate(Math.PI/4);ctx.fillRect(-3.2,-3.2,6.4,6.4);ctx.restore()}
+  for(let y=92;y<=H-92;y+=22){ctx.save();ctx.translate(64,y);ctx.rotate(Math.PI/4);ctx.fillRect(-3.2,-3.2,6.4,6.4);ctx.restore();ctx.save();ctx.translate(W-64,y);ctx.rotate(Math.PI/4);ctx.fillRect(-3.2,-3.2,6.4,6.4);ctx.restore()}
+  ctx.restore();
+  // Dense monochrome lattice in the centre.
+  ctx.save();ctx.beginPath();ctx.roundRect(86,86,W-172,H-172,10);ctx.clip();ctx.strokeStyle="rgba(17,17,17,.88)";ctx.lineWidth=.9;
+  for(let y=96,row=0;y<H-86;y+=13,row++)for(let x=94;x<W-86;x+=13){
+    const px=x+(row%2?6.5:0);ctx.beginPath();ctx.moveTo(px,y-4);ctx.lineTo(px+4,y);ctx.lineTo(px,y+4);ctx.lineTo(px-4,y);ctx.closePath();ctx.stroke()
+  }
+  // subtle symmetric rosettes
+  for(const [cx,cy] of [[W/2,218],[W/2,H-218]]){ctx.save();ctx.translate(cx,cy);for(let i=0;i<8;i++){ctx.rotate(Math.PI/4);ctx.beginPath();ctx.ellipse(0,-26,9,27,0,0,Math.PI*2);ctx.stroke()}ctx.restore()}
+  ctx.restore();
+  // Clean centre medallion so the selected group logo remains readable.
+  ctx.save();ctx.fillStyle="#FDFDFB";ctx.strokeStyle="#111111";ctx.lineWidth=2.4;ctx.beginPath();ctx.ellipse(W/2,H/2,142,104,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(W/2,H/2,126,90,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+  await e.backLogo({maxWidth:190,cx:W/2,cy:H/2})
 }
 
 async function frontSignature(e){
