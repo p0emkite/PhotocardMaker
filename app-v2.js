@@ -6,6 +6,7 @@ const TEMPLATE_DEFAULTS_KEY="photocard-maker-template-defaults-v1";
 const TEMPLATE_FAVORITES_KEY="photocard-maker-template-favorites-v1";
 const TEMPLATE_RECENTS_KEY="photocard-maker-template-recents-v1";
 const TEMPLATE_PRESETS_KEY="photocard-maker-template-presets-v1";
+const WORKSPACE_SPLIT_KEY="photocard-maker-workspace-split-v1";
 const COLOR_KEY="photocard-maker-v2-custom-colors";
 const PROGRESS_KEY="photocard-maker-v2-excel-progress";
 const DB_NAME="photocard-maker-storage",DB_STORE="handles",DB_KEY="folder";
@@ -378,7 +379,86 @@ async function loadExcelPanel(file){if(!file)return;try{excelRows=(await parseEx
 function saveProgress(){saveJson(PROGRESS_KEY,{rows:excelRows,selectedId,sortCol,sortDesc,filters,hint:$("excelDataHint").textContent});excelStatus("진행 상태를 저장했습니다.")}
 function restoreProgress(){const p=loadJson(PROGRESS_KEY,null);if(!p?.rows?.length)return;excelRows=p.rows;selectedId=p.selectedId||null;sortCol=p.sortCol||null;sortDesc=!!p.sortDesc;filters={...Object.fromEntries(COLUMNS.map(c=>[c,""])),...(p.filters||{})};$("excelDataHint").textContent=p.hint||"저장된 작업 상태 복원";renderExcelHead();renderExcelBody();excelStatus("이전 작업 상태를 복원했습니다.")}
 
+let workspaceResizeFrame=0;
+function workspaceSplitEnabled(){return window.matchMedia("(min-width:1181px)").matches}
+function workspaceSplitBounds(){
+  const shell=document.querySelector(".page-shell"),handle=$("workspaceResizer");
+  if(!shell||!handle)return{min:320,max:900,total:1220};
+  const total=shell.clientWidth,divider=handle.offsetWidth||14,leftMin=620,rightMin=320;
+  return{min:rightMin,max:Math.max(rightMin,total-leftMin-divider),total}
+}
+function defaultExcelPaneWidth(){
+  const {min,max,total}=workspaceSplitBounds();
+  return clamp(Math.round(total*.42),min,max)
+}
+function applyExcelPaneWidth(width,persist=false){
+  const shell=document.querySelector(".page-shell"),handle=$("workspaceResizer");
+  if(!shell||!handle)return;
+  if(!workspaceSplitEnabled()){shell.style.removeProperty("--excel-pane-width");return}
+  const {min,max,total}=workspaceSplitBounds(),px=clamp(Math.round(Number(width)||defaultExcelPaneWidth()),min,max);
+  shell.style.setProperty("--excel-pane-width",px+"px");
+  const pct=Math.round(px/Math.max(1,total)*100);
+  handle.setAttribute("aria-valuenow",String(pct));
+  handle.setAttribute("aria-valuetext",`Excel 영역 ${px}px · 전체의 약 ${pct}%`);
+  handle.title=`Excel 데이터 영역 ${px}px · 드래그하여 조절 · 더블클릭으로 기본값 복원`;
+  if(persist)saveJson(WORKSPACE_SPLIT_KEY,{excelWidth:px});
+}
+function restoreWorkspaceSplit(){
+  const saved=loadJson(WORKSPACE_SPLIT_KEY,null);
+  applyExcelPaneWidth(saved?.excelWidth??defaultExcelPaneWidth(),false)
+}
+function resetWorkspaceSplit(){
+  localStorage.removeItem(WORKSPACE_SPLIT_KEY);
+  applyExcelPaneWidth(defaultExcelPaneWidth(),false)
+}
+function initWorkspaceResizer(){
+  const shell=document.querySelector(".page-shell"),handle=$("workspaceResizer");
+  if(!shell||!handle)return;
+  restoreWorkspaceSplit();
+  let active=false,lastWidth=null;
+  const move=e=>{
+    if(!active||!workspaceSplitEnabled())return;
+    const rect=shell.getBoundingClientRect();
+    lastWidth=rect.right-e.clientX;
+    applyExcelPaneWidth(lastWidth,false)
+  };
+  const end=e=>{
+    if(!active)return;
+    active=false;shell.classList.remove("is-resizing");
+    try{handle.releasePointerCapture(e.pointerId)}catch{}
+    if(lastWidth!=null)applyExcelPaneWidth(lastWidth,true)
+  };
+  handle.addEventListener("pointerdown",e=>{
+    if(!workspaceSplitEnabled()||e.button!==0)return;
+    active=true;lastWidth=null;shell.classList.add("is-resizing");handle.setPointerCapture(e.pointerId);e.preventDefault()
+  });
+  handle.addEventListener("pointermove",move);
+  handle.addEventListener("pointerup",end);
+  handle.addEventListener("pointercancel",end);
+  handle.addEventListener("dblclick",e=>{e.preventDefault();resetWorkspaceSplit()});
+  handle.addEventListener("keydown",e=>{
+    if(!workspaceSplitEnabled())return;
+    const current=parseFloat(getComputedStyle(shell).getPropertyValue("--excel-pane-width"))||defaultExcelPaneWidth();
+    let next=null;
+    if(e.key==="ArrowLeft")next=current+(e.shiftKey?80:24);
+    if(e.key==="ArrowRight")next=current-(e.shiftKey?80:24);
+    if(e.key==="Home")next=workspaceSplitBounds().max;
+    if(e.key==="End")next=workspaceSplitBounds().min;
+    if(next!=null){e.preventDefault();applyExcelPaneWidth(next,true)}
+  });
+  let resizeTimer=0;
+  window.addEventListener("resize",()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(()=>{
+      if(workspaceSplitEnabled()){
+        const saved=loadJson(WORKSPACE_SPLIT_KEY,null);
+        applyExcelPaneWidth(saved?.excelWidth??defaultExcelPaneWidth(),false)
+      }else shell.style.removeProperty("--excel-pane-width")
+    },80)
+  })
+}
+
 function bind(){bindRange("focusX",0,100);bindRange("focusY",0,100);bindRange("zoom",100,500);bindRange("frontLogoScale",40,200);bindRange("frontLogoX",0,650);bindRange("frontLogoY",0,1004);bindRange("backLogoScale",40,200);bindRange("backLogoX",0,650);bindRange("backLogoY",0,1004);bindRange("signatureScale",40,220);bindRange("signatureX",0,650);bindRange("signatureY",0,1004);bindGestures();$("photoInput").onchange=e=>choosePhoto(e.target.files?.[0]);$("cutoutBtn").onclick=doCutout;$("restorePhotoBtn").onclick=restoreOriginalPhoto;$("nameInput").oninput=()=>{maybeName();queue()};$("templateSelect").onchange=()=>{const id=$("templateSelect").value;recordTemplateRecent(id);applyTemplateDefaults(id,true)};$("openTemplateBrowserBtn").onclick=openTemplateBrowser;$("closeTemplateBrowserBtn").onclick=()=>$("templateBrowserDialog").close();$("templateSearchInput").oninput=renderTemplateBrowser;$("schoolNameInput").oninput=queue;$("trumpSuitSelect").onchange=()=>{syncTrumpPicker("suit");syncTrumpPicker("rank");queue()};$("trumpRankInput").oninput=queue;$("trumpSuitColorSelect").onchange=()=>{syncTrumpPicker("suit");queue()};$("trumpRankColorSelect").onchange=()=>{syncTrumpPicker("rank");queue()};$("trumpSuitColorPicker").oninput=()=>trumpPickerToSelect("suit");$("trumpRankColorPicker").oninput=()=>trumpPickerToSelect("rank");$("signatureInput").onchange=e=>chooseSignature(e.target.files?.[0]);$("clearSignatureBtn").onclick=clearSignature;$("groupSelect").onchange=()=>{templateThumbCache.clear();queue()};$("backStyleSelect").onchange=queue;$("fontSelect").onchange=queue;$("logoOutlineCheck").onchange=queue;$("logoShadowCheck").onchange=queue;$("elementColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("element");queue()};$("textColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("text");queue()};$("backgroundColorSelect").onchange=()=>{templateThumbCache.clear();syncBackgroundPicker();queue()};$("elementColorPicker").oninput=()=>pickerToSelect("element");$("textColorPicker").oninput=()=>pickerToSelect("text");$("backgroundColorPicker").oninput=backgroundPickerToSelect;["trackingInput","fontSizeInput","textXInput","textYInput","shadowCheck","strokeColorPicker","strokeWidthInput"].forEach(id=>$(id).oninput=queue);$("resetCropBtn").onclick=()=>{setLinked("focusX",50);setLinked("focusY",50);setLinked("zoom",100);queue()};$("resetTextBtn").onclick=()=>{Object.assign($("trackingInput"),{value:4});$("fontSizeInput").value=31;$("textXInput").value=325;$("textYInput").value=903;$("shadowCheck").checked=true;$("strokeColorPicker").value="#FFFFFF";$("strokeWidthInput").value=1;queue()};$("centerGuideCheck").oninput=updateGuide;$("frontTabBtn").onclick=()=>switchSide("front");$("backTabBtn").onclick=()=>switchSide("back");$("filenameInput").oninput=()=>filenameEdited=true;$("generateBtn").onclick=saveCurrent;$("savePairBtn").onclick=savePair;$("savePathBtn").onclick=pickFolder;$("presetSelect").onchange=onPresetSelectionChange;$("applyPresetBtn").onclick=applySelectedPreset;$("savePresetBtn").onclick=saveNewPreset;$("overwritePresetBtn").onclick=overwriteSelectedPreset;$("renamePresetBtn").onclick=renameSelectedPreset;$("deletePresetBtn").onclick=deleteSelectedPreset;$("presetNameInput").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveNewPreset()}};$("saveDefaultsBtn").onclick=saveCurrentTemplateDefaults;$("resetDefaultsBtn").onclick=resetCurrentTemplateDefaults;$("sampleExcelBtn").onclick=sampleExcel;$("excelInput").onchange=prepareBatch;$("imageFolderInput").onchange=prepareBatch;$("batchBtn").onclick=runBatch;$("excelDataLoadBtn").onclick=()=>$("excelDataInput").click();$("excelDataInput").onchange=e=>loadExcelPanel(e.target.files?.[0]);$("excelProgressSaveBtn").onclick=saveProgress;$("openColorManagerBtn").onclick=openColorManager;$("addCustomColorBtn").onclick=saveCustomColor;$("customColorPicker").oninput=e=>$("customColorHex").value=e.target.value.toUpperCase();$("customColorHex").oninput=e=>{const v=normalizeHex(e.target.value);if(v)$("customColorPicker").value=v}}
 async function registerModelCacheWorker(){if(!("serviceWorker" in navigator))return;try{await navigator.serviceWorker.register("./service-worker.js",{scope:"./"});await navigator.serviceWorker.ready}catch(e){console.warn("모델 캐시 서비스 워커 등록 실패:",e)}}
-async function init(){registerModelCacheWorker();initFonts();initTemplates();$("fontSelect").value="Playfair Display";$("logoOutlineCheck").checked=true;$("logoShadowCheck").checked=true;initColors();initGroups();updateTemplateExtras();bind();renderExcelHead();renderExcelBody();restoreProgress();const saved=loadJson(STORAGE_KEY,null);applyTemplateDefaults("ribbon",false);if(saved?.name)$("nameInput").value=saved.name;maybeName(true);saveDir=await loadHandle();pathText();switchSide("front");status("준비 완료. 사진을 선택하세요.",false,true);loadAsset(GROUPS.IVE.logo).catch(()=>{})}
+async function init(){registerModelCacheWorker();initWorkspaceResizer();initFonts();initTemplates();$("fontSelect").value="Playfair Display";$("logoOutlineCheck").checked=true;$("logoShadowCheck").checked=true;initColors();initGroups();updateTemplateExtras();bind();renderExcelHead();renderExcelBody();restoreProgress();const saved=loadJson(STORAGE_KEY,null);applyTemplateDefaults("ribbon",false);if(saved?.name)$("nameInput").value=saved.name;maybeName(true);saveDir=await loadHandle();pathText();switchSide("front");status("준비 완료. 사진을 선택하세요.",false,true);loadAsset(GROUPS.IVE.logo).catch(()=>{})}
 init();
