@@ -43,6 +43,7 @@ let editColorName=null,editGroupId=null,pendingGroupLogo=null,pendingGroupLogoMe
 let templateBrowserFilter="all",templateThumbToken=0,templateThumbPlaceholder=null;
 const templateThumbCache=new Map();
 const assetCache=new Map();
+const sessionLogoPreviewCache=new Map();
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const esc=s=>String(s??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
@@ -196,9 +197,11 @@ async function deleteLogoFromGithub(path,silent=false){
 }
 function primeLogoAsset(path,dataUrl){
   if(!path||!dataUrl)return;
+  sessionLogoPreviewCache.set(path,dataUrl);
   const p=new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("로고 로드 실패"));i.src=dataUrl});
   assetCache.set(path,p)
 }
+function groupLogoDisplaySrc(g){return sessionLogoPreviewCache.get(g?.logo)||g?.logo||null}
 
 function initGroups(preferred="IVE"){
   const s=$("groupSelect"),old=preferred??s.value;
@@ -287,14 +290,14 @@ function editGroup(id){
   const g=GROUPS[id];if(!g)return;editGroupId=id;pendingGroupLogo=null;pendingGroupLogoMeta=null;$("groupEditorTitle").textContent=g.builtIn?g.label+" 기본 그룹 설정":g.label+" 수정";$("groupNameInput").value=g.label;
   $("groupNameInput").disabled=!!g.builtIn;$("groupLogoInput").value="";$("groupElementColor").value=colorValue(g.element,"#E7C68E");$("groupTextColor").value=colorValue(g.text,"#F5E5C2");
   const auto=!g.background||g.background==="auto";$("groupBackgroundDefaultCheck").checked=auto;$("groupBackgroundColor").disabled=auto;$("groupBackgroundColor").value=auto?"#FFFFFF":colorValue(g.background,"#FFFFFF");
-  $("saveGroupBtn").textContent="변경 저장";groupLogoPreview(g.logo);renderGroupManagerList();groupStatus(g.builtIn?"기본 그룹은 이름과 삭제는 잠겨 있고 로고·대표 컬러는 수정할 수 있습니다.":"현재 그룹 정보를 수정하고 있습니다.")
+  $("saveGroupBtn").textContent="변경 저장";groupLogoPreview(groupLogoDisplaySrc(g));renderGroupManagerList();groupStatus(g.builtIn?"기본 그룹은 이름과 삭제는 잠겨 있고 로고·대표 컬러는 수정할 수 있습니다.":"현재 그룹 정보를 수정하고 있습니다.")
 }
 function renderGroupManagerList(){
   const root=$("groupManagerList");if(!root)return;
   const entries=Object.entries(GROUPS).filter(([id])=>id!=="").sort((a,b)=>Number(b[1].builtIn)-Number(a[1].builtIn)||a[1].label.localeCompare(b[1].label,"ko-KR"));
   $("groupCountLabel").textContent=`총 ${entries.length}개`;
   root.innerHTML=entries.map(([id,g])=>`<div class="group-item${editGroupId===id?" selected":""}" data-group-id="${esc(id)}">
-    <div class="group-item-logo">${g.logo?`<img src="${esc(g.logo)}" alt="">`:"<span>로고 없음</span>"}</div>
+    <div class="group-item-logo">${g.logo?`<img src="${esc(groupLogoDisplaySrc(g))}" alt="">`:"<span>로고 없음</span>"}</div>
     <div><div class="group-item-name">${esc(g.label)}</div><div class="group-item-kind">${g.builtIn?"기본 그룹":"내 그룹"}</div>
       <div class="group-item-swatches"><span class="group-item-swatch" title="요소" style="background:${esc(colorValue(g.element,"#E7C68E"))}"></span><span class="group-item-swatch" title="텍스트" style="background:${esc(colorValue(g.text,"#F5E5C2"))}"></span><span class="group-item-swatch" title="배경" style="background:${esc(g.background&&g.background!=="auto"?colorValue(g.background,"#FFFFFF"):"#FFFFFF")}"></span></div>
     </div>
