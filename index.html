@@ -245,7 +245,7 @@
     <section class="panel batch-panel">
       <div class="batch-head">
         <div><h2>Excel 일괄 생성</h2><p>템플릿 · 그룹 · 요소 컬러 · 텍스트 컬러 · 배경 컬러 · 이름 · 이미지명 · 저장파일명</p></div>
-        <button id="sampleExcelBtn" class="secondary" type="button">일괄 생성 엑셀 양식 다운로드</button>
+        <button id="sampleExcelBtn" class="secondary" type="button">엑셀 양식 다운로드</button>
       </div>
       <div class="batch-inputs">
         <div class="field"><label>Excel 파일</label><input id="excelInput" type="file" accept=".xlsx,.xls"></div>
@@ -266,6 +266,7 @@
     <div class="excel-data-head">
       <div><h2>불러온 엑셀 데이터</h2><p id="excelDataHint">엑셀을 불러오면 행을 클릭해 설정을 적용할 수 있습니다.</p></div>
       <div class="excel-data-actions">
+        <button id="excelTemplateDownloadBtn" class="secondary" type="button">엑셀 양식 다운로드</button>
         <button id="excelProgressSaveBtn" class="ghost" type="button">진행 상태 저장</button>
         <button id="excelDataLoadBtn" class="secondary" type="button">엑셀 데이터 불러오기</button>
         <input id="excelDataInput" type="file" accept=".xlsx,.xls" hidden>
@@ -316,6 +317,6 @@
 </dialog>
 
 <footer>렌더링은 사용자 브라우저 안에서 실행됩니다. 사진은 서버로 업로드하지 않습니다.</footer>
-<script type="module" src="./app-v2.js?v=19"></script>
+<script type="module" src="./app-v2.js?v=20"></script>
 </body>
 </html>
