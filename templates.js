@@ -121,7 +121,7 @@ export const TEMPLATE_REGISTRY={
   },
   scrapbook:{
     id:"scrapbook",label:"19. Scrapbook",category:"paper",
-    defaults:common({font:"Caveat",fontSize:48,tracking:1,textX:325,textY:876,frontLogoX:548,frontLogoY:86,frontLogoScale:72}),
+    defaults:common({font:"Caveat",fontSize:48,tracking:1,textX:325,textY:882,frontLogoX:548,frontLogoY:86,frontLogoScale:72}),
     extras:[],front:"scrapbook",back:"scrapbook"
   },
   diary:{
@@ -131,7 +131,7 @@ export const TEMPLATE_REGISTRY={
   },
   love_letter:{
     id:"love_letter",label:"21. Love Letter",category:"romantic",
-    defaults:common({font:"Parisienne",fontSize:50,tracking:1,textX:325,textY:884,frontLogoX:518,frontLogoY:84,frontLogoScale:68,backLogoY:544}),
+    defaults:common({font:"Parisienne",fontSize:50,tracking:1,textX:325,textY:874,frontLogoX:542,frontLogoY:105,frontLogoScale:58,backLogoY:544}),
     extras:[],front:"love_letter",back:"love_letter"
   },
   student_id:{
@@ -146,7 +146,7 @@ export const TEMPLATE_REGISTRY={
   },
   album_tracklist:{
     id:"album_tracklist",label:"24. Album Tracklist",category:"music",
-    defaults:common({font:"Space Grotesk",fontSize:38,tracking:2,textX:325,textY:817,frontLogoX:325,frontLogoY:908,frontLogoScale:72,backLogoY:892}),
+    defaults:common({font:"Space Grotesk",fontSize:38,tracking:2,textX:325,textY:814,frontLogoX:325,frontLogoY:914,frontLogoScale:68,backLogoY:892}),
     extras:[],front:"album_tracklist",back:"album_tracklist"
   },
   starry_night:{
@@ -171,7 +171,7 @@ export const TEMPLATE_REGISTRY={
   },
   dressing_mirror:{
     id:"dressing_mirror",label:"41. Dressing Room Mirror",category:"showbiz",
-    defaults:common({font:"Bodoni Moda",fontSize:40,tracking:3,textX:325,textY:893,frontLogoX:325,frontLogoY:812,frontLogoScale:66,backLogoX:325,backLogoY:430}),
+    defaults:common({font:"Bodoni Moda",fontSize:40,tracking:3,textX:325,textY:920,frontLogoX:325,frontLogoY:841,frontLogoScale:62,backLogoX:325,backLogoY:430}),
     extras:[],front:"dressing_mirror",back:"dressing_mirror"
   },
   signature:{
@@ -453,16 +453,22 @@ function strawberryIcon(ctx,x,y,s,color="#E73F61",leaf="#4E9B5B"){
   ctx.fillStyle="#FFD9A2";for(const [dx,dy] of [[-.15,-.05],[.14,-.08],[0,.08],[-.10,.19],[.12,.19]]){ctx.beginPath();ctx.ellipse(x+s*dx,y+s*dy,s*.022,s*.045,0,0,Math.PI*2);ctx.fill()}ctx.restore()
 }
 function bulb(ctx,x,y,r,frameColor){
-  ctx.save();ctx.shadowColor="rgba(255,235,170,.95)";ctx.shadowBlur=r*2.4;ctx.fillStyle="#FFF7D8";ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle=rgba(frameColor,.55);ctx.lineWidth=1.3;ctx.stroke();ctx.fillStyle="rgba(255,255,255,.95)";ctx.beginPath();ctx.arc(x-r*.25,y-r*.28,r*.27,0,Math.PI*2);ctx.fill();ctx.restore()
+  ctx.save();ctx.shadowColor="rgba(255,235,170,.99)";ctx.shadowBlur=r*2.9;ctx.fillStyle="#FFF6CF";ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle=rgba(frameColor,.58);ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle="rgba(255,255,255,.99)";ctx.beginPath();ctx.arc(x-r*.25,y-r*.28,r*.31,0,Math.PI*2);ctx.fill();ctx.restore()
 }
-function dressingBulbs(ctx,W,H,frameColor){
-  const left=54,right=W-54,top=56,bottom=790,r=10;
-  for(let x=96;x<=W-96;x+=66)bulb(ctx,x,top,r,frameColor);
-  for(let x=96;x<=W-96;x+=66)bulb(ctx,x,bottom,r,frameColor);
-  for(let y=116;y<=730;y+=68){bulb(ctx,left,y,r,frameColor);bulb(ctx,right,y,r,frameColor)}
+function dressingBulbs(ctx,W,H,frameColor,r=10){
+  const large=r>=13,left=54,right=W-54,top=56,bottom=790,stepX=large?74:66,stepY=large?78:68,startX=large?103:96,startY=large?126:116,endY=large?716:730;
+  for(let x=startX;x<=W-startX;x+=stepX)bulb(ctx,x,top,r,frameColor);
+  for(let x=startX;x<=W-startX;x+=stepX)bulb(ctx,x,bottom,r,frameColor);
+  for(let y=startY;y<=endY;y+=stepY){bulb(ctx,left,y,r,frameColor);bulb(ctx,right,y,r,frameColor)}
 }
 function glowFrame(ctx,W,H,color){
   ctx.save();ctx.shadowColor=color;ctx.shadowBlur=24;ctx.strokeStyle=rgba(color,.92);ctx.lineWidth=4;ctx.beginPath();ctx.roundRect(20,20,W-40,H-40,28);ctx.stroke();ctx.shadowBlur=9;ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(32,32,W-64,H-64,20);ctx.stroke();ctx.restore()
+}
+function twinkle(ctx,x,y,r,color="rgba(255,248,210,.98)",glow=14){
+  ctx.save();ctx.translate(x,y);ctx.shadowColor=color;ctx.shadowBlur=glow;ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineCap="round";
+  ctx.lineWidth=Math.max(1.2,r*.18);ctx.beginPath();ctx.moveTo(-r,0);ctx.lineTo(r,0);ctx.moveTo(0,-r);ctx.lineTo(0,r);ctx.stroke();
+  ctx.lineWidth=Math.max(1,r*.10);ctx.beginPath();ctx.moveTo(-r*.55,-r*.55);ctx.lineTo(r*.55,r*.55);ctx.moveTo(r*.55,-r*.55);ctx.lineTo(-r*.55,r*.55);ctx.stroke();
+  ctx.shadowBlur=0;ctx.beginPath();ctx.arc(0,0,Math.max(1.3,r*.13),0,Math.PI*2);ctx.fill();ctx.restore()
 }
 
 async function frontGradientGlow(e){
@@ -492,7 +498,10 @@ async function frontScrapbook(e){
   tape(ctx,118,105,130,34,-.10,rgba(c.element,.72));tape(ctx,W-120,770,128,34,.09,rgba(c.text,.70));
   star(ctx,82,850,18,7,rgba(c.element,.82),.2,5);heart(ctx,W-78,842,22,rgba(c.element,.72));tinyBow(ctx,W-96,166,28,rgba(c.element,.65));
   ctx.save();ctx.strokeStyle="rgba(80,68,54,.28)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(84,812);ctx.bezierCurveTo(160,786,212,826,282,804);ctx.stroke();ctx.restore();
-  await e.logo({w:68,effects:true});e.name({x:c.textX,y:c.textY,maxWidth:430,size:c.fontSize,font:c.font,fill:"#4A3D31",stroke:"#FFFDF8",shadow:false})
+  centeredText(ctx,"memo",103,916,'500 18px "Caveat",cursive',"rgba(92,73,56,.48)",1);
+  line(ctx,150,918,W-76,918,"rgba(92,73,56,.19)",1);
+  await e.logo({w:68,effects:true});
+  e.name({x:c.textX,y:c.textY,maxWidth:430,size:c.fontSize,font:c.font||"Caveat",fill:"#4A3D31",stroke:"#F4EBDD",shadow:true})
 }
 async function backScrapbook(e){
   const {ctx,W,H,c}=e;e.backBase("#F4EBDD");paperLines(ctx,W,H,80,52,"rgba(129,151,160,.12)");tape(ctx,112,96,144,38,-.08,rgba(c.element,.64));tape(ctx,W-116,H-94,146,38,.08,rgba(c.text,.62));star(ctx,96,222,22,8,rgba(c.element,.70),.2,5);heart(ctx,W-92,H-224,28,rgba(c.element,.68));strokeRound(ctx,54,54,W-108,H-108,24,"rgba(112,92,68,.22)",1.2);await e.backLogo({maxWidth:235})
@@ -510,17 +519,33 @@ async function backDiary(e){
 }
 
 async function frontLoveLetter(e){
-  const {ctx,W,H,c}=e;e.backBase("#FFF7EE");strokeRound(ctx,24,24,W-48,H-48,28,rgba(c.element,.55),1.5);
-  ctx.save();ctx.shadowColor="rgba(81,52,49,.18)";ctx.shadowBlur=16;ctx.shadowOffsetY=7;e.fillRound(58,96,W-116,664,12,"#FFFFFF");ctx.restore();e.photoRect(70,108,W-140,640,8);
-  tape(ctx,112,116,108,30,-.12,"rgba(245,216,192,.72)");
-  ctx.save();ctx.strokeStyle=rgba(c.element,.48);ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(54,806);ctx.lineTo(W-54,806);ctx.stroke();ctx.restore();
-  // wax seal
-  ctx.save();ctx.fillStyle=rgba(c.element,.88);ctx.shadowColor="rgba(100,40,50,.28)";ctx.shadowBlur=8;ctx.beginPath();ctx.arc(92,866,34,0,Math.PI*2);ctx.fill();ctx.restore();heart(ctx,92,866,18,"#FFF3E8");
-  await e.logo({w:64,effects:true});e.name({x:c.textX,y:c.textY,maxWidth:420,size:c.fontSize,font:c.font,fill:"#5D4146",stroke:"#FFF7EE",shadow:false})
+  const {ctx,W,H,c}=e;e.backBase("#F8E3EC");
+  ctx.save();const bg=ctx.createLinearGradient(0,0,W,H);bg.addColorStop(0,"rgba(255,255,255,.58)");bg.addColorStop(.52,"rgba(255,235,244,.18)");bg.addColorStop(1,"rgba(226,147,177,.20)");ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);ctx.restore();
+  // subtle paper grain dots
+  ctx.save();ctx.fillStyle="rgba(181,102,132,.055)";for(let y=38;y<H;y+=34)for(let x=34;x<W;x+=38){ctx.beginPath();ctx.arc(x+(y%68?5:0),y,1.1,0,Math.PI*2);ctx.fill()}ctx.restore();
+  strokeRound(ctx,24,24,W-48,H-48,28,"rgba(198,103,138,.38)",1.5);
+  centeredText(ctx,"Love Letter",W/2,72,'400 45px "Parisienne",cursive',"#B75D7D",0);
+  heart(ctx,174,70,12,"rgba(215,112,150,.72)");heart(ctx,W-174,70,12,"rgba(215,112,150,.72)");
+  ctx.save();ctx.shadowColor="rgba(103,57,75,.18)";ctx.shadowBlur=18;ctx.shadowOffsetY=7;e.fillRound(58,126,W-116,604,18,"#FFFDFB");ctx.restore();
+  e.photoRect(72,140,W-144,576,12);
+  tape(ctx,112,145,108,30,-.12,"rgba(248,202,219,.78)");
+  // hearts hug the photo frame rather than floating separately
+  heart(ctx,64,195,22,"rgba(224,119,157,.82)");heart(ctx,W-63,250,17,"rgba(224,119,157,.72)");
+  heart(ctx,82,682,16,"rgba(224,119,157,.65)");heart(ctx,W-76,654,24,"rgba(224,119,157,.80)");
+  ctx.save();ctx.strokeStyle="rgba(198,103,138,.30)";ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(82,765);ctx.quadraticCurveTo(210,742,325,766);ctx.quadraticCurveTo(448,788,W-82,760);ctx.stroke();ctx.restore();
+  // dedicated signature/name field
+  ctx.save();ctx.fillStyle="rgba(255,250,252,.88)";ctx.shadowColor="rgba(116,60,79,.13)";ctx.shadowBlur=8;ctx.beginPath();ctx.roundRect(112,812,W-224,118,28);ctx.fill();ctx.restore();
+  line(ctx,160,907,W-160,907,"rgba(185,94,126,.22)",1);
+  ctx.save();ctx.fillStyle="rgba(205,111,145,.90)";ctx.shadowColor="rgba(100,40,50,.18)";ctx.shadowBlur=7;ctx.beginPath();ctx.arc(92,870,31,0,Math.PI*2);ctx.fill();ctx.restore();heart(ctx,92,870,16,"#FFF5F8");
+  await e.logo({w:64,effects:true});
+  e.name({x:c.textX,y:c.textY,maxWidth:380,size:c.fontSize,font:c.font,fill:"#704657",stroke:"#FFF9FB",shadow:false})
 }
 async function backLoveLetter(e){
-  const {ctx,W,H,c}=e;e.backBase("#FFF7EE");strokeRound(ctx,24,24,W-48,H-48,28,rgba(c.element,.55),1.5);
-  ctx.save();ctx.strokeStyle=rgba(c.element,.45);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(40,260);ctx.lineTo(W/2,H/2+42);ctx.lineTo(W-40,260);ctx.moveTo(40,H-40);ctx.lineTo(W/2,H/2+42);ctx.lineTo(W-40,H-40);ctx.stroke();ctx.restore();ctx.save();ctx.fillStyle=rgba(c.element,.90);ctx.beginPath();ctx.arc(W/2,H/2+42,42,0,Math.PI*2);ctx.fill();ctx.restore();await e.backLogo({maxWidth:180})
+  const {ctx,W,H,c}=e;e.backBase("#F8E3EC");strokeRound(ctx,24,24,W-48,H-48,28,"rgba(198,103,138,.38)",1.5);
+  centeredText(ctx,"Love Letter",W/2,86,'400 39px "Parisienne",cursive',"#B75D7D",0);
+  ctx.save();ctx.strokeStyle="rgba(198,103,138,.38)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(40,270);ctx.lineTo(W/2,H/2+42);ctx.lineTo(W-40,270);ctx.moveTo(40,H-40);ctx.lineTo(W/2,H/2+42);ctx.lineTo(W-40,H-40);ctx.stroke();ctx.restore();
+  ctx.save();ctx.fillStyle="rgba(205,111,145,.90)";ctx.beginPath();ctx.arc(W/2,H/2+42,42,0,Math.PI*2);ctx.fill();ctx.restore();heart(ctx,W/2,H/2+42,20,"#FFF5F8");
+  await e.backLogo({maxWidth:180})
 }
 
 async function frontConcertTicket(e){
@@ -537,23 +562,38 @@ async function backConcertTicket(e){
 }
 
 async function frontAlbumTracklist(e){
-  const {ctx,W,H,c}=e;e.backBase("#F2F0EC");ctx.save();ctx.shadowColor="rgba(0,0,0,.20)";ctx.shadowBlur=18;ctx.shadowOffsetY=7;e.fillRound(62,66,W-124,540,10,"#FFFFFF");ctx.restore();e.photoRect(74,78,W-148,516,6);
-  centeredText(ctx,"SIDE A",90,650,'600 13px "Space Grotesk",sans-serif',rgba(c.element,.72),2.5);
-  for(let i=0;i<6;i++){const y=690+i*30;centeredText(ctx,String(i+1).padStart(2,"0"),92,y,'500 12px "Space Grotesk",sans-serif',rgba(c.element,.55),1);line(ctx,122,y,W-76,y,rgba(c.element,i===0?.50:.24),i===0?2:1)}
+  const {ctx,W,H,c}=e;e.backBase("#F2F0EC");
+  const cx=W/2,cy=315,outerR=235,photoR=207;
+  ctx.save();ctx.shadowColor="rgba(0,0,0,.30)";ctx.shadowBlur=24;ctx.shadowOffsetY=9;ctx.fillStyle="#111214";ctx.beginPath();ctx.arc(cx,cy,outerR,0,Math.PI*2);ctx.fill();ctx.restore();
+  // picture-disc circular photo
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,photoR,0,Math.PI*2);ctx.clip();e.photoRect(cx-photoR,cy-photoR,photoR*2,photoR*2,0);ctx.restore();
+  // vinyl grooves on top
+  ctx.save();for(let r=218;r>=88;r-=13){ctx.strokeStyle=r%26===10?"rgba(255,255,255,.12)":"rgba(0,0,0,.16)";ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke()}ctx.restore();
+  ctx.save();ctx.fillStyle=rgba(c.element,.90);ctx.shadowColor="rgba(0,0,0,.25)";ctx.shadowBlur=6;ctx.beginPath();ctx.arc(cx,cy,45,0,Math.PI*2);ctx.fill();ctx.fillStyle="rgba(255,255,255,.92)";ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fill();ctx.restore();
+  centeredText(ctx,"SIDE A",90,598,'600 13px "Space Grotesk",sans-serif',rgba(c.element,.72),2.5);
+  for(let i=0;i<6;i++){const y=638+i*30;centeredText(ctx,String(i+1).padStart(2,"0"),92,y,'500 12px "Space Grotesk",sans-serif',rgba(c.element,.55),1);line(ctx,122,y,W-76,y,rgba(c.element,i===0?.50:.24),i===0?2:1)}
   e.name({x:c.textX,y:c.textY,maxWidth:470,size:c.fontSize,font:c.font,fill:"#242424",stroke:"#F2F0EC",shadow:false});await e.logo({w:68,effects:true})
 }
 async function backAlbumTracklist(e){
-  const {ctx,W,H,c}=e;e.backBase("#F2F0EC");centeredText(ctx,"SIDE B",W/2,116,'600 15px "Space Grotesk",sans-serif',rgba(c.element,.72),4);for(let i=0;i<8;i++){const y=190+i*68;centeredText(ctx,String(i+1).padStart(2,"0"),95,y,'500 13px "Space Grotesk",sans-serif',rgba(c.element,.55),1);line(ctx,135,y,W-72,y,rgba(c.element,.28),1)}await e.backLogo({maxWidth:180})
+  const {ctx,W,H,c}=e;e.backBase("#F2F0EC");centeredText(ctx,"SIDE B",W/2,116,'600 15px "Space Grotesk",sans-serif',rgba(c.element,.72),4);
+  ctx.save();ctx.globalAlpha=.055;ctx.fillStyle="#111";ctx.beginPath();ctx.arc(W-20,410,250,0,Math.PI*2);ctx.fill();for(let r=225;r>70;r-=15){ctx.strokeStyle="#FFF";ctx.lineWidth=1;ctx.beginPath();ctx.arc(W-20,410,r,0,Math.PI*2);ctx.stroke()}ctx.restore();
+  for(let i=0;i<8;i++){const y=190+i*68;centeredText(ctx,String(i+1).padStart(2,"0"),95,y,'500 13px "Space Grotesk",sans-serif',rgba(c.element,.55),1);line(ctx,135,y,W-72,y,rgba(c.element,.28),1)}await e.backLogo({maxWidth:180})
 }
 
 async function frontStarryNight(e){
   const {ctx,W,H,c}=e;e.photoRect(0,0,W,H,e.R);ctx.save();ctx.fillStyle="rgba(6,12,35,.28)";ctx.fillRect(0,0,W,H);let g=ctx.createLinearGradient(0,H*.55,0,H);g.addColorStop(0,"rgba(5,10,28,0)");g.addColorStop(1,"rgba(5,10,28,.62)");ctx.fillStyle=g;ctx.fillRect(0,H*.5,W,H*.5);ctx.restore();
-  const stars=[[54,96,5],[118,184,3],[540,130,4],[578,270,3],[72,510,3],[558,584,5],[112,736,4],[505,740,3],[300,122,3],[378,220,4],[245,688,3]];for(const [x,y,s] of stars)star(ctx,x,y,s,s*.18,"rgba(255,247,205,.95)",0,4);
-  ctx.save();ctx.fillStyle="rgba(255,245,195,.90)";ctx.beginPath();ctx.arc(92,160,34,0,Math.PI*2);ctx.fill();ctx.fillStyle="rgba(12,18,44,.96)";ctx.beginPath();ctx.arc(108,146,34,0,Math.PI*2);ctx.fill();ctx.restore();
+  const stars=[[42,82,4],[68,118,3],[118,184,3],[144,112,4],[176,158,2.5],[220,94,3],[268,142,2.5],[300,122,3],[344,88,3],[378,220,4],[430,126,2.5],[482,180,3],[540,130,4],[594,112,2.5],[578,270,3],[62,338,2.5],[128,302,3],[514,332,2.5],[594,390,3],[72,510,3],[142,548,2.5],[526,502,3],[558,584,5],[84,648,2.5],[184,620,3],[245,688,3],[420,654,2.5],[112,736,4],[505,740,3],[586,690,2.5]];
+  for(const [x,y,s] of stars){ctx.save();ctx.shadowColor="rgba(255,247,205,.92)";ctx.shadowBlur=s*2.4;star(ctx,x,y,s,s*.18,"rgba(255,247,205,.96)",0,4);ctx.restore()}
+  const twinkles=[[76,112,9],[132,142,6],[188,96,7],[252,192,5],[332,168,7],[446,96,8],[552,210,6],[92,430,6],[570,474,8],[152,696,7],[454,724,6],[548,620,5],[302,566,5]];
+  for(const [x,y,r] of twinkles)twinkle(ctx,x,y,r,"rgba(255,250,222,.98)",r*1.8);
+  ctx.save();ctx.shadowColor="rgba(255,245,195,.90)";ctx.shadowBlur=24;ctx.fillStyle="rgba(255,245,195,.94)";ctx.beginPath();ctx.arc(92,160,34,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle="rgba(12,18,44,.96)";ctx.beginPath();ctx.arc(108,146,34,0,Math.PI*2);ctx.fill();ctx.restore();
+  twinkle(ctx,46,172,7,"rgba(255,250,222,.98)",16);twinkle(ctx,154,210,5,"rgba(255,250,222,.95)",12);
   await e.logo({w:68,effects:true});e.name({x:c.textX,y:c.textY,maxWidth:450,size:c.fontSize,font:c.font,fill:c.text,stroke:"#0B1230",shadow:true})
 }
 async function backStarryNight(e){
-  const {ctx,W,H,c}=e;e.backBase("#0B1230");for(let y=72;y<H;y+=82)for(let x=54;x<W;x+=96)star(ctx,x+((y/82)%2)*34,y,3+(x+y)%4,1,"rgba(255,247,205,.78)",0,4);ctx.save();ctx.strokeStyle=rgba(c.element,.38);ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(W/2,H/2,220,0,Math.PI*2);ctx.stroke();ctx.restore();await e.backLogo({maxWidth:235})
+  const {ctx,W,H,c}=e;e.backBase("#0B1230");for(let y=64;y<H;y+=68)for(let x=42;x<W;x+=78){const px=x+((Math.floor(y/68)%2)*30),s=2.2+((x+y)%4);ctx.save();ctx.shadowColor="rgba(255,247,205,.62)";ctx.shadowBlur=s*1.8;star(ctx,px,y,s,Math.max(.8,s*.18),"rgba(255,247,205,.82)",0,4);ctx.restore()}
+  for(const [x,y,r] of [[92,142,7],[554,164,6],[168,306,5],[490,356,7],[92,596,5],[552,650,7],[184,822,6],[462,850,5]])twinkle(ctx,x,y,r,"rgba(255,250,222,.92)",r*1.6);
+  ctx.save();ctx.strokeStyle=rgba(c.element,.38);ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(W/2,H/2,220,0,Math.PI*2);ctx.stroke();ctx.restore();await e.backLogo({maxWidth:235})
 }
 
 async function frontButterfly(e){
@@ -566,9 +606,11 @@ async function backButterfly(e){
 }
 
 async function frontCherryStrawberry(e){
-  const {ctx,W,H,c}=e;e.photoRect(0,0,W,H,e.R);ctx.save();const g=ctx.createLinearGradient(0,H-230,0,H);g.addColorStop(0,"rgba(255,255,255,0)");g.addColorStop(1,"rgba(255,248,244,.66)");ctx.fillStyle=g;ctx.fillRect(0,H-260,W,260);ctx.restore();
+  const {ctx,W,H,c}=e;e.photoRect(0,0,W,H,e.R);
   cherryIcon(ctx,82,134,60,"#D91E4B","#4E9B5B");strawberryIcon(ctx,W-92,170,66,"#E73F61","#4E9B5B");cherryIcon(ctx,W-86,H-198,48,"#D91E4B","#4E9B5B");strawberryIcon(ctx,96,H-190,52,"#E73F61","#4E9B5B");
-  checker(ctx,0,H-120,W,120,28,rgba(c.element,.92),"rgba(255,255,255,.95)",.20);await e.logo({w:68,effects:true});e.name({x:c.textX,y:c.textY,maxWidth:440,size:c.fontSize,font:c.font,fill:"#5B2D38",stroke:"#FFF7F3",shadow:false})
+  checker(ctx,0,H-132,W,132,28,lighten(c.element,.36),"#FFF7F3",1);
+  line(ctx,0,H-132,W,H-132,"rgba(255,255,255,.92)",2);
+  await e.logo({w:68,effects:true});e.name({x:c.textX,y:c.textY,maxWidth:440,size:c.fontSize,font:c.font,fill:"#5B2D38",stroke:"#FFF7F3",shadow:false})
 }
 async function backCherryStrawberry(e){
   const {ctx,W,H,c}=e;e.backBase("#FFF7F3");checker(ctx,0,0,W,H,46,rgba(c.element,.18),"rgba(255,255,255,.82)",1);for(const [x,y,k] of [[90,130,0],[W-92,154,1],[126,780,1],[W-116,820,0]])k?strawberryIcon(ctx,x,y,58):cherryIcon(ctx,x,y,56);ctx.save();ctx.fillStyle="rgba(255,255,255,.82)";ctx.beginPath();ctx.roundRect(105,325,W-210,354,48);ctx.fill();ctx.restore();await e.backLogo({maxWidth:220})
@@ -579,12 +621,14 @@ async function frontDressingMirror(e){
   ctx.save();ctx.shadowColor="rgba(0,0,0,.55)";ctx.shadowBlur=26;ctx.shadowOffsetY=12;e.fillRound(34,28,W-68,790,24,lighten(c.element,.78));ctx.restore();
   e.fillRound(78,76,W-156,690,8,"#171717");e.photoRect(88,86,W-176,670,4);
   ctx.save();const g=ctx.createLinearGradient(88,86,W-88,756);g.addColorStop(0,"rgba(255,255,255,.13)");g.addColorStop(.35,"rgba(255,255,255,0)");g.addColorStop(1,"rgba(255,255,255,.06)");ctx.fillStyle=g;ctx.fillRect(88,86,W-176,670);ctx.restore();
-  dressingBulbs(ctx,W,H,c.element);strokeRound(ctx,34,28,W-68,790,24,rgba(c.element,.60),2);
-  ctx.save();ctx.fillStyle=lighten(c.element,.82);ctx.shadowColor="rgba(0,0,0,.35)";ctx.shadowBlur=12;ctx.beginPath();ctx.roundRect(92,834,W-184,112,18);ctx.fill();ctx.restore();await e.logo({w:64,effects:false});e.name({x:c.textX,y:c.textY,maxWidth:380,size:c.fontSize,font:c.font,fill:"#3B3028",stroke:"#FFFFFF",shadow:false})
+  dressingBulbs(ctx,W,H,c.element,14);strokeRound(ctx,34,28,W-68,790,24,rgba(c.element,.60),2);
+  // frame ends at y=818; plate begins at 864, leaving a deliberate 46px breathing gap.
+  ctx.save();ctx.fillStyle=lighten(c.element,.82);ctx.shadowColor="rgba(0,0,0,.35)";ctx.shadowBlur=12;ctx.beginPath();ctx.roundRect(92,864,W-184,112,18);ctx.fill();ctx.restore();
+  await e.logo({w:64,effects:false});e.name({x:c.textX,y:c.textY,maxWidth:380,size:c.fontSize,font:c.font,fill:"#3B3028",stroke:"#FFFFFF",shadow:false})
 }
 async function backDressingMirror(e){
   const {ctx,W,H,c}=e;e.backBase("#25211F");ctx.save();ctx.shadowColor="rgba(0,0,0,.55)";ctx.shadowBlur=26;e.fillRound(34,28,W-68,790,24,lighten(c.element,.78));ctx.restore();e.fillRound(78,76,W-156,690,8,"#B8B2AC");
-  ctx.save();const g=ctx.createLinearGradient(88,86,W-88,756);g.addColorStop(0,"rgba(255,255,255,.70)");g.addColorStop(.45,"rgba(255,255,255,.15)");g.addColorStop(1,"rgba(55,62,68,.18)");ctx.fillStyle=g;ctx.fillRect(88,86,W-176,670);ctx.restore();dressingBulbs(ctx,W,H,c.element);strokeRound(ctx,34,28,W-68,790,24,rgba(c.element,.60),2);await e.backLogo({maxWidth:220})
+  ctx.save();const g=ctx.createLinearGradient(88,86,W-88,756);g.addColorStop(0,"rgba(255,255,255,.70)");g.addColorStop(.45,"rgba(255,255,255,.15)");g.addColorStop(1,"rgba(55,62,68,.18)");ctx.fillStyle=g;ctx.fillRect(88,86,W-176,670);ctx.restore();dressingBulbs(ctx,W,H,c.element,10);strokeRound(ctx,34,28,W-68,790,24,rgba(c.element,.60),2);await e.backLogo({maxWidth:220})
 }
 
 async function frontPolaroid(e){
