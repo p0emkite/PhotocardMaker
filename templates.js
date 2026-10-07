@@ -62,7 +62,7 @@ export const TEMPLATE_REGISTRY={
   },
   signature:{
     id:"signature",label:"39. Signature",category:"special",
-    defaults:common({font:"Sacramento",fontSize:30,tracking:1,textX:115,textY:942,frontLogoX:576,frontLogoY:67,frontLogoScale:78}),
+    defaults:common({font:"Sacramento",fontSize:30,tracking:1,textX:115,textY:942,frontLogoX:576,frontLogoY:67,frontLogoScale:78,signatureScale:100,signatureX:363,signatureY:862}),
     extras:["signatureImage"],front:"signature",back:"signature"
   }
 };
@@ -155,8 +155,9 @@ async function frontStudentId(e){
   e.backBase("#FFFFFF");
   // top colored block modeled after the reference
   ctx.save();ctx.fillStyle=c.element;ctx.fillRect(0,0,W,505);ctx.restore();
-  // lanyard slot
-  ctx.save();ctx.strokeStyle="rgba(255,255,255,.8)";ctx.lineWidth=2;e.fillRound(W/2-78,28,156,34,17,"rgba(255,255,255,.05)");ctx.strokeRect(0,0,0,0);ctx.beginPath();ctx.roundRect(W/2-78,28,156,34,17);ctx.stroke();ctx.restore();
+  // lanyard slot: actual transparent hole in exported PNG
+  e.punchRoundRect(W/2-78,28,156,34,17);
+  ctx.save();ctx.strokeStyle="rgba(255,255,255,.92)";ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(W/2-78,28,156,34,17);ctx.stroke();ctx.restore();
   centeredText(ctx,"학 생 증",W/2,118,'600 40px "Montserrat",sans-serif',"#FFFFFF",17);
   line(ctx,W/2-14,162,W/2+14,162,"rgba(255,255,255,.86)",2);
   centeredText(ctx,"STUDENT ID CARD",W/2,211,'400 20px "Montserrat",sans-serif',"rgba(255,255,255,.92)",3.2);
@@ -183,9 +184,9 @@ async function frontTrump(e){
   ctx.save();ctx.strokeStyle="#111";ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(14,14,W-28,H-28,38);ctx.stroke();ctx.restore();
   // giant suit behind portrait
   ctx.save();ctx.fillStyle=rgba(color,.16);ctx.font='700 560px Georgia,serif';ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(symbol,W/2,H/2-5);ctx.restore();
-  // portrait card window
-  ctx.save();ctx.shadowColor="rgba(0,0,0,.18)";ctx.shadowBlur=18;ctx.shadowOffsetY=5;e.fillRound(92,128,W-184,690,22,"#FFFFFF");ctx.restore();
-  e.photoRect(92,128,W-184,690,22);
+  // Subject layer. AI-cutout PNG keeps the giant suit visible around the person.
+  ctx.save();ctx.shadowColor="rgba(0,0,0,.22)";ctx.shadowBlur=16;ctx.shadowOffsetY=5;
+  e.subjectRect(82,112,W-164,720,20);ctx.restore();
   // corner rank/suit
   const rank=String(c.trumpRank||"A").toUpperCase();
   ctx.save();ctx.fillStyle=color;ctx.textAlign="center";ctx.font='500 58px "Bodoni Moda",Georgia,serif';ctx.fillText(rank,68,82);ctx.font='700 52px Georgia,serif';ctx.fillText(symbol,68,139);ctx.restore();
@@ -205,13 +206,13 @@ async function frontSignature(e){
   ctx.save();const g=ctx.createLinearGradient(0,H-260,0,H);g.addColorStop(0,"rgba(0,0,0,0)");g.addColorStop(1,"rgba(0,0,0,.42)");ctx.fillStyle=g;ctx.fillRect(0,H-280,W,280);ctx.restore();
   await e.logo({w:72,effects:true});
   e.name({x:c.textX,y:c.textY,maxWidth:190,size:c.fontSize,font:"Montserrat"});
-  if(e.signatureImage)e.signature({cx:W/2+38,cy:H-142,maxWidth:365,maxHeight:145});
+  if(e.signatureImage)e.signature({maxWidth:365,maxHeight:145});
   else centeredText(ctx,c.name||"",W/2+50,H-142,'400 38px "Sacramento",cursive',"rgba(255,255,255,.9)",0)
 }
 async function backSignature(e){
   const {ctx,W,H,c}=e;e.backBase("#FCFBFA");
   line(ctx,54,72,W-54,72,rgba(c.element,.75),1.5);line(ctx,54,H-72,W-54,H-72,rgba(c.element,.75),1.5);
-  await e.backLogo();if(e.signatureImage)e.signature({cx:W/2,cy:H-160,maxWidth:300,maxHeight:105,alpha:.95})
+  await e.backLogo();if(e.signatureImage)e.signature({cx:W/2,cy:H-160,maxWidth:300,maxHeight:105,alpha:.95,useControls:false})
 }
 
 const FRONT_RENDERERS={
