@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" role="img" aria-label="IVE">
   <rect width="800" height="300" fill="none"/>
-  <g fill="#fff">
+  <g fill="#111111">
     <path d="M92 40h72v220H92z"/>
     <path d="M206 40h78l74 148L432 40h78L396 260h-76z"/>
     <path d="M542 40h166v58h-96v26h82v56h-82v22h102v58H542z"/>
