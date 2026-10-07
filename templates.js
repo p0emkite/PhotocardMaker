@@ -33,7 +33,7 @@ export const FONT_REGISTRY=[
 export const FONT_MAP=Object.fromEntries(FONT_REGISTRY.map(x=>[x.name,x.family]));
 
 const common=(over={})=>({
-  font:"Playfair Display",fontSize:31,tracking:4,textX:325,textY:903,
+  font:"Playfair Display",fontSize:31,tracking:4,textX:325,textY:903,background:"auto",
   backStyle:"center",frontLogoScale:100,frontLogoX:325,frontLogoY:60,
   backLogoScale:100,backLogoX:325,backLogoY:502,logoOutline:true,logoShadow:true,
   ...over
@@ -195,6 +195,7 @@ const lighten=(hex,mix=.9)=>{
   return `rgb(${ch(0)},${ch(2)},${ch(4)})`
 };
 function line(ctx,x1,y1,x2,y2,color,width=1){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.restore()}
+function heart(ctx,x,y,s,color){ctx.save();ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(x,y+s*.38);ctx.bezierCurveTo(x-s*.72,y-s*.2,x-s*.46,y-s*.86,x,y-s*.44);ctx.bezierCurveTo(x+s*.46,y-s*.86,x+s*.72,y-s*.2,x,y+s*.38);ctx.fill();ctx.restore()}
 function cornerMark(ctx,x,y,s,color,flipX=1,flipY=1){line(ctx,x,y,x+s*flipX,y,color,1.5);line(ctx,x,y,x,y+s*flipY,color,1.5)}
 function centeredText(ctx,text,x,y,font,color,spacing=0){
   ctx.save();ctx.font=font;ctx.fillStyle=color;ctx.textBaseline="middle";
@@ -563,15 +564,15 @@ async function backConcertTicket(e){
 
 async function frontAlbumTracklist(e){
   const {ctx,W,H,c}=e;e.backBase("#F2F0EC");
-  const cx=W/2,cy=315,outerR=235,photoR=207;
+  const cx=W/2,cy=318,outerR=258,photoR=246;
   ctx.save();ctx.shadowColor="rgba(0,0,0,.30)";ctx.shadowBlur=24;ctx.shadowOffsetY=9;ctx.fillStyle="#111214";ctx.beginPath();ctx.arc(cx,cy,outerR,0,Math.PI*2);ctx.fill();ctx.restore();
   // picture-disc circular photo
   ctx.save();ctx.beginPath();ctx.arc(cx,cy,photoR,0,Math.PI*2);ctx.clip();e.photoRect(cx-photoR,cy-photoR,photoR*2,photoR*2,0);ctx.restore();
   // vinyl grooves on top
-  ctx.save();for(let r=218;r>=88;r-=13){ctx.strokeStyle=r%26===10?"rgba(255,255,255,.12)":"rgba(0,0,0,.16)";ctx.lineWidth=1;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke()}ctx.restore();
+  ctx.save();for(let r=250;r>=92;r-=13){ctx.strokeStyle=r%26===3?"rgba(255,255,255,.11)":"rgba(0,0,0,.15)";ctx.lineWidth=.9;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke()}ctx.restore();
   ctx.save();ctx.fillStyle=rgba(c.element,.90);ctx.shadowColor="rgba(0,0,0,.25)";ctx.shadowBlur=6;ctx.beginPath();ctx.arc(cx,cy,45,0,Math.PI*2);ctx.fill();ctx.fillStyle="rgba(255,255,255,.92)";ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fill();ctx.restore();
-  centeredText(ctx,"SIDE A",90,598,'600 13px "Space Grotesk",sans-serif',rgba(c.element,.72),2.5);
-  for(let i=0;i<6;i++){const y=638+i*30;centeredText(ctx,String(i+1).padStart(2,"0"),92,y,'500 12px "Space Grotesk",sans-serif',rgba(c.element,.55),1);line(ctx,122,y,W-76,y,rgba(c.element,i===0?.50:.24),i===0?2:1)}
+  centeredText(ctx,"SIDE A",90,606,'600 13px "Space Grotesk",sans-serif',rgba(c.element,.72),2.5);
+  for(let i=0;i<6;i++){const y=646+i*30;centeredText(ctx,String(i+1).padStart(2,"0"),92,y,'500 12px "Space Grotesk",sans-serif',rgba(c.element,.55),1);line(ctx,122,y,W-76,y,rgba(c.element,i===0?.50:.24),i===0?2:1)}
   e.name({x:c.textX,y:c.textY,maxWidth:470,size:c.fontSize,font:c.font,fill:"#242424",stroke:"#F2F0EC",shadow:false});await e.logo({w:68,effects:true})
 }
 async function backAlbumTracklist(e){
@@ -608,8 +609,6 @@ async function backButterfly(e){
 async function frontCherryStrawberry(e){
   const {ctx,W,H,c}=e;e.photoRect(0,0,W,H,e.R);
   cherryIcon(ctx,82,134,60,"#D91E4B","#4E9B5B");strawberryIcon(ctx,W-92,170,66,"#E73F61","#4E9B5B");cherryIcon(ctx,W-86,H-198,48,"#D91E4B","#4E9B5B");strawberryIcon(ctx,96,H-190,52,"#E73F61","#4E9B5B");
-  checker(ctx,0,H-132,W,132,28,lighten(c.element,.36),"#FFF7F3",1);
-  line(ctx,0,H-132,W,H-132,"rgba(255,255,255,.92)",2);
   await e.logo({w:68,effects:true});e.name({x:c.textX,y:c.textY,maxWidth:440,size:c.fontSize,font:c.font,fill:"#5B2D38",stroke:"#FFF7F3",shadow:false})
 }
 async function backCherryStrawberry(e){
