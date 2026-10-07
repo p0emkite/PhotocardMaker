@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Allura&family=Bebas+Neue&family=Bodoni+Moda:wght@400;600&family=Bungee&family=Caveat:wght@400;600&family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@400;600&family=DM+Serif+Display&family=Dancing+Script:wght@400;600&family=Great+Vibes&family=Inter:wght@400;600&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;600&family=Montserrat:wght@400;600&family=Orbitron:wght@400;600&family=Oswald:wght@400;600&family=Pacifico&family=Parisienne&family=Playfair+Display:wght@400;600&family=Poppins:wght@400;600&family=Prata&family=Press+Start+2P&family=Quicksand:wght@400;600&family=Raleway:wght@400;600&family=Righteous&family=Sacramento&family=Satisfy&family=Space+Grotesk:wght@400;600&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles.css?v=4">
-<link rel="stylesheet" href="./v2.css?v=12">
+<link rel="stylesheet" href="./v2.css?v=13">
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
@@ -316,6 +316,29 @@
       <button id="closeGroupManagerBtn" class="ghost" type="button">닫기</button>
     </div>
 
+    <section class="github-logo-storage">
+      <div class="github-logo-storage-head">
+        <div>
+          <b>GitHub 로고 저장소</b>
+          <span id="githubLogoStorageStatus">미연결 · 로고는 브라우저에만 저장됩니다.</span>
+        </div>
+        <span class="github-repo-path">p0emkite/PhotocardMaker · assets/logos/custom</span>
+      </div>
+      <div class="github-connect-row">
+        <input id="githubTokenInput" type="password" autocomplete="off" spellcheck="false" placeholder="Fine-grained token · Contents: Read and write">
+        <button id="githubConnectBtn" class="secondary" type="button">연결 확인</button>
+        <button id="githubDisconnectBtn" class="ghost" type="button" disabled>연결 해제</button>
+      </div>
+      <div class="github-storage-options">
+        <label class="check"><input id="githubLogoUploadCheck" type="checkbox" checked> 새/변경 로고를 GitHub에 저장</label>
+        <small>토큰은 이 브라우저 탭의 sessionStorage에만 보관하며 소스 코드·그룹 데이터에는 저장하지 않습니다.</small>
+      </div>
+      <details class="github-token-help">
+        <summary>필요한 GitHub 권한 보기</summary>
+        <p>Fine-grained token에서 저장소는 <b>p0emkite/PhotocardMaker만</b> 선택하고, Repository permissions의 <b>Contents: Read and write</b>만 허용하면 됩니다.</p>
+      </details>
+    </section>
+
     <div class="group-manager-layout">
       <section class="group-editor">
         <h3 id="groupEditorTitle">새 그룹 추가</h3>
@@ -396,6 +419,6 @@
 </dialog>
 
 <footer>렌더링은 사용자 브라우저 안에서 실행됩니다. 사진은 서버로 업로드하지 않습니다.</footer>
-<script type="module" src="./app-v2.js?v=26"></script>
+<script type="module" src="./app-v2.js?v=27"></script>
 </body>
 </html>
