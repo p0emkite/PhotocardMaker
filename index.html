@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Allura&family=Bebas+Neue&family=Bodoni+Moda:wght@400;600&family=Bungee&family=Caveat:wght@400;600&family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@400;600&family=DM+Serif+Display&family=Dancing+Script:wght@400;600&family=Great+Vibes&family=Inter:wght@400;600&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;600&family=Montserrat:wght@400;600&family=Orbitron:wght@400;600&family=Oswald:wght@400;600&family=Pacifico&family=Parisienne&family=Playfair+Display:wght@400;600&family=Poppins:wght@400;600&family=Prata&family=Press+Start+2P&family=Quicksand:wght@400;600&family=Raleway:wght@400;600&family=Righteous&family=Sacramento&family=Satisfy&family=Space+Grotesk:wght@400;600&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles.css?v=1">
-<link rel="stylesheet" href="./v2.css?v=8">
+<link rel="stylesheet" href="./v2.css?v=9">
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
@@ -43,6 +43,7 @@
           <div class="field"><label for="backStyleSelect">뒷면 스타일</label><select id="backStyleSelect"><option value="center">중앙형</option><option value="diagonal">대각형 (-45°)</option><option value="pattern">반복 패턴형 (-30°)</option><option value="pattern45">반복 패턴형 (-45°)</option></select></div>
           <div class="field"><label>요소 컬러</label><div class="color-row"><select id="elementColorSelect"></select><input id="elementColorPicker" type="color" value="#E7C68E"></div></div>
           <div class="field"><label>텍스트 컬러</label><div class="color-row"><select id="textColorSelect"></select><input id="textColorPicker" type="color" value="#F5E5C2"></div></div>
+          <div class="field"><label>배경 컬러</label><div class="color-row"><select id="backgroundColorSelect"></select><input id="backgroundColorPicker" type="color" value="#FFFFFF"></div></div>
           <div class="field full-span"><button id="openColorManagerBtn" class="secondary wide" type="button">+ 사용자 색상 추가 / 관리</button></div>
         </div>
 
@@ -216,7 +217,7 @@
 
     <section class="panel batch-panel">
       <div class="batch-head">
-        <div><h2>Excel 일괄 생성</h2><p>템플릿 · 그룹 · 요소 컬러 · 텍스트 컬러 · 이름 · 이미지명 · 저장파일명</p></div>
+        <div><h2>Excel 일괄 생성</h2><p>템플릿 · 그룹 · 요소 컬러 · 텍스트 컬러 · 배경 컬러 · 이름 · 이미지명 · 저장파일명</p></div>
         <button id="sampleExcelBtn" class="secondary" type="button">일괄 생성 엑셀 양식 다운로드</button>
       </div>
       <div class="batch-inputs">
@@ -248,7 +249,7 @@
 <dialog id="colorManagerDialog" class="color-dialog">
   <form method="dialog" class="color-dialog-inner">
     <div class="dialog-head">
-      <div><h2>사용자 색상 관리</h2><p>이름과 색상을 저장하면 요소/텍스트 컬러 목록에 함께 표시됩니다.</p></div>
+      <div><h2>사용자 색상 관리</h2><p>이름과 색상을 저장하면 요소/텍스트/배경 컬러 목록에 함께 표시됩니다.</p></div>
       <button class="ghost" value="cancel">닫기</button>
     </div>
     <div class="custom-color-form">
@@ -261,6 +262,6 @@
 </dialog>
 
 <footer>렌더링은 사용자 브라우저 안에서 실행됩니다. 사진은 서버로 업로드하지 않습니다.</footer>
-<script type="module" src="./app-v2.js?v=12"></script>
+<script type="module" src="./app-v2.js?v=13"></script>
 </body>
 </html>
