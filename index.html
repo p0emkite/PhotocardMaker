@@ -36,7 +36,7 @@
           <div class="field"><label>출력 크기</label><input type="text" value="650 × 1004" readonly></div>
           <div class="field full-span"><label for="nameInput">이름</label><input id="nameInput" type="text" value="WONYOUNG"></div>
           <div class="field"><label for="groupSelect">그룹</label><select id="groupSelect"></select></div>
-          <div class="field"><label for="backStyleSelect">뒷면 스타일</label><select id="backStyleSelect"><option value="center">중앙형</option><option value="diagonal">대각형 (-45°)</option><option value="pattern">반복 패턴형 (-30°)</option></select></div>
+          <div class="field"><label for="backStyleSelect">뒷면 스타일</label><select id="backStyleSelect"><option value="center">중앙형</option><option value="diagonal">대각형 (-45°)</option><option value="pattern">반복 패턴형 (-30°)</option><option value="pattern45">반복 패턴형 (-45°)</option></select></div>
           <div class="field"><label>요소 컬러</label><div class="color-row"><select id="elementColorSelect"></select><input id="elementColorPicker" type="color" value="#E7C68E"></div></div>
           <div class="field"><label>텍스트 컬러</label><div class="color-row"><select id="textColorSelect"></select><input id="textColorPicker" type="color" value="#F5E5C2"></div></div>
           <div class="field full-span"><button id="openColorManagerBtn" class="secondary wide" type="button">+ 사용자 색상 추가 / 관리</button></div>
@@ -91,13 +91,23 @@
         </details>
 
         <details>
-          <summary>앞면 그룹 로고 효과</summary>
+          <summary>그룹 로고 조정</summary>
           <div class="details-body">
+            <div class="range-row">
+              <label>앞면 크기</label>
+              <input id="frontLogoScaleRange" type="range" min="40" max="200" value="100">
+              <input id="frontLogoScaleNumber" type="number" min="40" max="200" value="100">
+            </div>
+            <div class="range-row">
+              <label>뒷면 크기</label>
+              <input id="backLogoScaleRange" type="range" min="40" max="200" value="100">
+              <input id="backLogoScaleNumber" type="number" min="40" max="200" value="100">
+            </div>
             <div class="inline-options logo-effect-options">
               <label class="check"><input id="logoOutlineCheck" type="checkbox" checked> 검정 외곽선 1px</label>
               <label class="check"><input id="logoShadowCheck" type="checkbox" checked> 부드러운 그림자</label>
             </div>
-            <small class="option-note">앞면 로고에만 적용됩니다. 뒷면 로고와 반복 패턴에는 테두리·그림자를 적용하지 않습니다.</small>
+            <small class="option-note">크기는 앞면/뒷면 각각 따로 저장됩니다. 외곽선·그림자는 앞면 로고에만 적용되며, 뒷면 로고와 반복 패턴에는 적용하지 않습니다.</small>
           </div>
         </details>
 
@@ -195,6 +205,6 @@
 </dialog>
 
 <footer>렌더링은 사용자 브라우저 안에서 실행됩니다. 사진은 서버로 업로드하지 않습니다.</footer>
-<script type="module" src="./app-v2.js?v=6"></script>
+<script type="module" src="./app-v2.js?v=7"></script>
 </body>
 </html>
