@@ -98,12 +98,12 @@ export const TEMPLATE_REGISTRY={
   },
   editorial:{
     id:"editorial",label:"15. Editorial Grid",category:"editorial",
-    defaults:common({font:"Space Grotesk",fontSize:43,tracking:1,textX:438,textY:874,frontLogoX:91,frontLogoY:72,frontLogoScale:70}),
+    defaults:common({font:"Space Grotesk",fontSize:43,tracking:1,textX:438,textY:874,frontLogoX:91,frontLogoY:72,frontLogoScale:70,backLogoX:350,backLogoY:520}),
     extras:[],front:"editorial",back:"editorial"
   },
   split:{
     id:"split",label:"16. Split Color",category:"modern",
-    defaults:common({font:"Poppins",fontSize:38,tracking:3,textX:155,textY:862,frontLogoX:132,frontLogoY:106,frontLogoScale:78}),
+    defaults:common({font:"Poppins",fontSize:38,tracking:3,textX:155,textY:862,frontLogoX:132,frontLogoY:106,frontLogoScale:78,backLogoX:390,backLogoY:502}),
     extras:[],front:"split",back:"split"
   },
   student_id:{
@@ -348,7 +348,7 @@ async function frontEditorial(e){
 async function backEditorial(e){
   const {ctx,W,H,c}=e;e.backBase("#F8F8F6");
   ctx.save();ctx.fillStyle=c.element;ctx.fillRect(0,0,92,H);ctx.fillStyle=rgba(c.element,.15);ctx.fillRect(92,0,W-92,136);ctx.fillRect(W-220,136,220,H-136);ctx.restore();
-  line(ctx,122,186,W-54,186,rgba(c.element,.45),1);line(ctx,122,186,122,H-74,rgba(c.element,.45),1);await e.backLogo({maxWidth:225,cx:350,cy:520})
+  line(ctx,122,186,W-54,186,rgba(c.element,.45),1);line(ctx,122,186,122,H-74,rgba(c.element,.45),1);await e.backLogo({maxWidth:225})
 }
 
 async function frontSplit(e){
@@ -363,7 +363,7 @@ async function frontSplit(e){
 async function backSplit(e){
   const {ctx,W,H,c}=e;e.backBase(lighten(c.element,.92));
   ctx.save();ctx.fillStyle=c.element;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(265,0);ctx.lineTo(225,H);ctx.lineTo(0,H);ctx.closePath();ctx.fill();ctx.fillStyle="rgba(255,255,255,.16)";ctx.beginPath();ctx.moveTo(238,0);ctx.lineTo(281,0);ctx.lineTo(241,H);ctx.lineTo(198,H);ctx.closePath();ctx.fill();ctx.restore();
-  await e.backLogo({maxWidth:230,cx:390,cy:H/2})
+  await e.backLogo({maxWidth:230})
 }
 
 async function frontPolaroid(e){
