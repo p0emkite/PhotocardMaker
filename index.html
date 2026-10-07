@@ -6,13 +6,14 @@
 <title>Photocard Maker</title>
 <meta name="description" content="브라우저에서 만드는 포토카드 메이커">
 <link rel="stylesheet" href="./styles.css?v=1">
+<link rel="stylesheet" href="./v2.css?v=2">
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
 <body>
 <header class="topbar">
-  <div><h1>Photocard Maker</h1><p>설치 없이 포토카드 생성 · PNG 저장 · Excel 일괄 생성</p></div>
-  <span class="badge">준비 완료</span>
+  <div><h1>Photocard Maker</h1><p>설치 없이 포토카드 생성 · 앞/뒷면 PNG 저장 · Excel 일괄 생성</p></div>
+  <span class="badge ready">준비 완료</span>
 </header>
 
 <div class="page-shell">
@@ -31,9 +32,11 @@
           <div class="field"><label>템플릿</label><select id="templateSelect"><option value="리본">리본</option></select></div>
           <div class="field"><label>출력 크기</label><input type="text" value="650 × 1004" readonly></div>
           <div class="field full-span"><label for="nameInput">이름</label><input id="nameInput" type="text" value="WONYOUNG"></div>
+          <div class="field"><label for="groupSelect">그룹</label><select id="groupSelect"></select></div>
+          <div class="field"><label for="backStyleSelect">뒷면 스타일</label><select id="backStyleSelect"><option value="center">중앙형</option><option value="diagonal">대각형 (-45°)</option></select></div>
           <div class="field"><label>요소 컬러</label><div class="color-row"><select id="elementColorSelect"></select><input id="elementColorPicker" type="color" value="#E7C68E"></div></div>
           <div class="field"><label>텍스트 컬러</label><div class="color-row"><select id="textColorSelect"></select><input id="textColorPicker" type="color" value="#F5E5C2"></div></div>
-          <div class="field full-span"><label for="groupInput">그룹</label><input id="groupInput" type="text" placeholder="선택 입력"></div>
+          <div class="field full-span"><button id="openColorManagerBtn" class="secondary wide" type="button">+ 사용자 색상 추가 / 관리</button></div>
         </div>
 
         <details open>
@@ -67,8 +70,6 @@
           <summary>미리보기 가이드</summary>
           <div class="details-body">
             <label class="check"><input id="centerGuideCheck" type="checkbox" checked> 세로 50% 가이드</label>
-            <label class="check"><input id="faceGuideCheck" type="checkbox" checked> 얼굴 크기 가이드</label>
-            <div class="range-row compact"><label>얼굴 가이드</label><input id="faceGuideRange" type="range" min="40" max="180" value="100"><output id="faceGuideValue">100%</output></div>
           </div>
         </details>
 
@@ -85,20 +86,26 @@
 
       <section class="panel preview-panel">
         <div class="preview-title-row"><h2>미리보기</h2><span id="previewHint">이미지를 선택하세요</span></div>
+        <div class="side-tabs">
+          <button id="frontTabBtn" class="side-tab active" type="button">앞면</button>
+          <button id="backTabBtn" class="side-tab" type="button">뒷면</button>
+        </div>
         <div id="previewStage" class="preview-stage" tabindex="0">
           <canvas id="previewCanvas" width="650" height="1004"></canvas>
           <div id="centerGuide" class="center-guide"></div>
-          <div id="faceGuide" class="face-guide"></div>
           <div id="emptyPreview" class="empty-preview">사진을 선택하면<br>여기에 포토카드가 표시됩니다.</div>
         </div>
-        <p class="preview-help"><b>드래그</b>: 위치 이동 · <b>마우스 휠</b>: 확대/축소</p>
+        <p id="previewHelp" class="preview-help"><b>드래그</b>: 위치 이동 · <b>마우스 휠</b>: 확대/축소</p>
 
         <div class="save-box">
           <label for="filenameInput">저장 파일명</label>
           <div class="file-row">
             <input id="filenameInput" type="text" value="WONYOUNG_RIBBON_V1_650x1004.png">
             <button id="savePathBtn" class="ghost" type="button">저장 경로 설정</button>
-            <button id="generateBtn" class="primary" type="button" disabled>저장</button>
+          </div>
+          <div class="button-row save-actions">
+            <button id="generateBtn" class="primary" type="button" disabled>앞면 저장</button>
+            <button id="savePairBtn" class="secondary" type="button" disabled>앞·뒷면 ZIP 저장</button>
           </div>
           <div id="savePathStatus" class="save-path-status">저장 위치: 브라우저 기본 다운로드 폴더</div>
         </div>
@@ -115,7 +122,7 @@
         <div class="field"><label>Excel 파일</label><input id="excelInput" type="file" accept=".xlsx,.xls"></div>
         <div class="field"><label>이미지 폴더</label><input id="imageFolderInput" type="file" accept="image/*" multiple webkitdirectory directory></div>
       </div>
-      <div class="button-row"><button id="batchBtn" class="primary" type="button" disabled>일괄 생성 ZIP 다운로드</button></div>
+      <div class="button-row"><button id="batchBtn" class="primary" type="button" disabled>앞·뒷면 일괄 생성 ZIP</button></div>
       <div id="batchStatus" class="status compact-status">Excel과 이미지 폴더를 선택하세요.</div>
       <div id="batchTableWrap" class="batch-table-wrap"></div>
     </section>
@@ -137,7 +144,22 @@
   </aside>
 </div>
 
+<dialog id="colorManagerDialog" class="color-dialog">
+  <form method="dialog" class="color-dialog-inner">
+    <div class="dialog-head">
+      <div><h2>사용자 색상 관리</h2><p>이름과 색상을 저장하면 요소/텍스트 컬러 목록에 함께 표시됩니다.</p></div>
+      <button class="ghost" value="cancel">닫기</button>
+    </div>
+    <div class="custom-color-form">
+      <div class="field"><label for="customColorName">색상 이름</label><input id="customColorName" type="text" placeholder="예: IVE 핑크"></div>
+      <div class="field"><label for="customColorHex">색상</label><div class="color-row"><input id="customColorHex" type="text" value="#E7C68E"><input id="customColorPicker" type="color" value="#E7C68E"></div></div>
+      <button id="addCustomColorBtn" class="primary" type="button">색상 저장</button>
+    </div>
+    <div id="customColorList" class="custom-color-list"></div>
+  </form>
+</dialog>
+
 <footer>렌더링은 사용자 브라우저 안에서 실행됩니다. 사진은 서버로 업로드하지 않습니다.</footer>
-<script type="module" src="./app.js?v=1"></script>
+<script type="module" src="./app-v2.js?v=2"></script>
 </body>
 </html>
