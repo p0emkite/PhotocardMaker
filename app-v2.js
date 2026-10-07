@@ -1,4 +1,4 @@
-import {FONT_REGISTRY,FONT_MAP,TEMPLATE_REGISTRY,getTemplate,getTemplateList,renderTemplateFront,renderTemplateBack} from "./templates.js?v=10";
+import {FONT_REGISTRY,FONT_MAP,TEMPLATE_REGISTRY,getTemplate,getTemplateList,renderTemplateFront,renderTemplateBack} from "./templates.js?v=11";
 const $=id=>document.getElementById(id);
 const W=650,H=1004,R=38;
 const STORAGE_KEY="photocard-maker-v2-defaults";
@@ -370,6 +370,7 @@ function templateBrowserGroup(category){
   if(["classic","photo","editorial","luxury","minimal","modern"].includes(category))return"classic";
   if(["cute","soft","romantic","paper"].includes(category))return"cute";
   if(["dark","tech","game","glow"].includes(category))return"dark";
+  if(["showbiz","night","music"].includes(category))return"special";
   if(category==="sport")return"sport";
   if(category==="seasonal")return"seasonal";
   return"special"
