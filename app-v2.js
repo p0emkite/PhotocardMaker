@@ -141,7 +141,7 @@ function renderTemplateBrowser(){
   root.innerHTML=items.map(t=>`<div class="template-browser-card${selected===t.id?" selected":""}" role="button" tabindex="0" data-id="${esc(t.id)}">
     <button type="button" class="template-favorite-btn${fav.has(t.id)?" active":""}" data-favorite="${esc(t.id)}" title="즐겨찾기">${fav.has(t.id)?"★":"☆"}</button>
     <div class="template-thumb-wrap" data-thumb="${esc(t.id)}"><div class="template-thumb-placeholder">미리보기 생성 중…</div></div>
-    <div class="template-card-info"><div class="template-card-title">${esc(t.label)}</div><div class="template-card-category"><span>${esc(TEMPLATE_BROWSER_FILTERS.find(x=>x[0]===templateBrowserGroup(t.category))?.[1]||t.category)}</span>${templatePresetCount(t.id)?`<span class="template-preset-count">프리셋 ${templatePresetCount(t.id)}</span>`:""}</div></div>
+    <div class="template-card-info"><div class="template-card-title">${esc(t.label)}</div><div class="template-card-category"><span>${esc(TEMPLATE_BROWSER_FILTERS.find(x=>x[0]===templateBrowserGroup(t.category))?.[1]||t.category)}</span>${templatePresetCount(t.id)?`<span class="template-preset-count" title="이 템플릿에 저장된 스타일 프리셋">${templatePresetCount(t.id)}개 프리셋</span>`:""}</div></div>
   </div>`).join("");
   root.querySelectorAll(".template-favorite-btn").forEach(b=>b.onclick=e=>{e.stopPropagation();toggleTemplateFavorite(b.dataset.favorite)});
   const choose=card=>{const id=card.dataset.id;recordTemplateRecent(id);applyTemplateDefaults(id,true);$("templateBrowserDialog").close()};
@@ -157,8 +157,32 @@ function updateTemplateExtras(){const t=getTemplate($("templateSelect").value),e
 function templateUserDefaults(){return loadJson(TEMPLATE_DEFAULTS_KEY,{})}
 function templateDefaultState(id){const t=getTemplate(id),saved=templateUserDefaults()[t.id]||{};return {...(t.defaults||{}),...saved}}
 function applyTemplateDefaults(id,render=true){const t=getTemplate(id),d=templateDefaultState(t.id);$("templateSelect").value=t.id;if(d.font&&FONTS[d.font])$("fontSelect").value=d.font;if(d.fontSize!=null)$("fontSizeInput").value=d.fontSize;if(d.tracking!=null)$("trackingInput").value=d.tracking;if(d.textX!=null)$("textXInput").value=d.textX;if(d.textY!=null)$("textYInput").value=d.textY;if(d.backStyle)$("backStyleSelect").value=d.backStyle;applyBackgroundColor(d.background??"auto");if(d.schoolName!=null)$("schoolNameInput").value=d.schoolName;if(d.trumpSuit)$("trumpSuitSelect").value=d.trumpSuit;if(d.trumpRank!=null)$("trumpRankInput").value=d.trumpRank;applyTrumpColor("suit",d.trumpSuitColor??"auto");applyTrumpColor("rank",d.trumpRankColor??"auto");if(d.signatureScale!=null)setLinked("signatureScale",d.signatureScale);if(d.signatureX!=null)setLinked("signatureX",d.signatureX);if(d.signatureY!=null)setLinked("signatureY",d.signatureY);if(d.logoOutline!=null)$("logoOutlineCheck").checked=!!d.logoOutline;if(d.logoShadow!=null)$("logoShadowCheck").checked=!!d.logoShadow;setLinked("frontLogoScale",d.frontLogoScale??100);setLinked("frontLogoX",d.frontLogoX??325);setLinked("frontLogoY",d.frontLogoY??60);setLinked("backLogoScale",d.backLogoScale??100);setLinked("backLogoX",d.backLogoX??325);setLinked("backLogoY",d.backLogoY??502);updateTemplateExtras();maybeName();syncTemplateBrowserSelected();refreshPresetSelect();if(render)queue()}
-function allTemplatePresets(){return loadJson(TEMPLATE_PRESETS_KEY,{})}
-function templatePresetsFor(id){const all=allTemplatePresets(),set=all[id];return set&&typeof set==="object"&&!Array.isArray(set)?set:{}}
+const PRESET_STYLE_KEYS=new Set([
+  "group","element","text","background","font","fontSize","tracking","textX","textY",
+  "shadow","stroke","strokeWidth","backStyle",
+  "frontLogoScale","frontLogoX","frontLogoY","backLogoScale","backLogoX","backLogoY",
+  "logoOutline","logoShadow","schoolName",
+  "trumpSuit","trumpRank","trumpSuitColor","trumpRankColor",
+  "signatureScale","signatureX","signatureY"
+]);
+function normalizeStylePreset(raw){
+  if(!raw||typeof raw!=="object"||Array.isArray(raw))return null;
+  const out={};
+  for(const [k,v] of Object.entries(raw))if(PRESET_STYLE_KEYS.has(k)&&v!==undefined)out[k]=v;
+  if(raw._savedAt)out._savedAt=String(raw._savedAt);
+  return out
+}
+function allTemplatePresets(){
+  const raw=loadJson(TEMPLATE_PRESETS_KEY,{});
+  return raw&&typeof raw==="object"&&!Array.isArray(raw)?raw:{}
+}
+function templatePresetsFor(id){
+  const all=allTemplatePresets(),set=all[id];
+  if(!set||typeof set!=="object"||Array.isArray(set))return{};
+  const clean={};
+  for(const [name,preset] of Object.entries(set)){const p=normalizeStylePreset(preset);if(name.trim()&&p)clean[name]=p}
+  return clean
+}
 function templatePresetCount(id){return Object.keys(templatePresetsFor(id)).length}
 function presetStatus(msg,type=""){const e=$("presetStatus");if(!e)return;e.textContent=msg;e.className="preset-status"+(type?" "+type:"")}
 function currentStylePresetPayload(){
@@ -194,8 +218,10 @@ function refreshPresetSelect(preferred=""){
   if(old&&names.includes(old))s.value=old;
   updatePresetActions();
   if(!names.length)presetStatus("이 템플릿에 저장된 프리셋이 없습니다.");
-  else if(s.value)presetStatus(`“${s.value}” 선택됨 · 총 ${names.length}개`);
-  else presetStatus(`저장된 프리셋 ${names.length}개`);
+  else if(s.value){
+    const saved=presets[s.value]?._savedAt,when=saved?new Date(saved).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
+    presetStatus(`“${s.value}” 선택됨 · 총 ${names.length}개${when?` · 저장 ${when}`:""}`);
+  }else presetStatus(`저장된 프리셋 ${names.length}개`);
 }
 function savePresetStore(id,presets){
   const all=allTemplatePresets();
@@ -214,10 +240,16 @@ function saveNewPreset(){
 function applySelectedPreset(){
   const id=$("templateSelect").value,name=$("presetSelect").value,preset=templatePresetsFor(id)[name];
   if(!name||!preset){presetStatus("적용할 프리셋을 선택하세요.","error");return}
-  const current=ctrl(),keep={name:current.name,fx:current.fx,fy:current.fy,zoom:current.zoom};
-  applyCtrl({...current,...preset,template:id,...keep});
+  const current=ctrl();
+  const keep={
+    name:current.name,fx:current.fx,fy:current.fy,zoom:current.zoom,
+    filename:$("filenameInput").value,filenameEdited
+  };
+  applyCtrl({...current,...preset,template:id,name:keep.name,fx:keep.fx,fy:keep.fy,zoom:keep.zoom});
+  $("filenameInput").value=keep.filename;
+  filenameEdited=keep.filenameEdited;
   $("presetSelect").value=name;$("presetNameInput").value=name;updatePresetActions();templateThumbCache.clear();
-  presetStatus(`“${name}” 프리셋을 적용했습니다.`,"ok")
+  presetStatus(`“${name}” 프리셋 적용 완료 · 사진·이름·크롭·파일명 유지`,"ok")
 }
 function overwriteSelectedPreset(){
   const id=$("templateSelect").value,name=$("presetSelect").value,presets=templatePresetsFor(id);
