@@ -8,6 +8,12 @@ export const FONT_REGISTRY=[
   {name:"Abril Fatface",family:'"Abril Fatface",Georgia,serif',category:"display"},
   {name:"Cinzel",family:'"Cinzel",Georgia,serif',category:"display"},
   {name:"Bebas Neue",family:'"Bebas Neue","Arial Narrow",sans-serif',category:"display"},
+  {name:"Bungee",family:'"Bungee",sans-serif',category:"display"},
+  {name:"Orbitron",family:'"Orbitron",sans-serif',category:"display"},
+  {name:"Prata",family:'"Prata",Georgia,serif',category:"serif"},
+  {name:"Press Start 2P",family:'"Press Start 2P",monospace',category:"display"},
+  {name:"Righteous",family:'"Righteous",sans-serif',category:"display"},
+  {name:"Unbounded",family:'"Unbounded",sans-serif',category:"display"},
   {name:"Montserrat",family:'"Montserrat",Arial,sans-serif',category:"sans"},
   {name:"Poppins",family:'"Poppins",Arial,sans-serif',category:"sans"},
   {name:"Raleway",family:'"Raleway",Arial,sans-serif',category:"sans"},
@@ -35,20 +41,70 @@ export const TEMPLATE_REGISTRY={
     id:"ribbon",label:"01. Ribbon Classic",category:"classic",
     defaults:common(),extras:[],front:"ribbon",back:"ribbon"
   },
+  y2k:{
+    id:"y2k",label:"02. Y2K Sticker",category:"cute",
+    defaults:common({font:"Righteous",fontSize:43,tracking:1,textX:325,textY:900,frontLogoX:565,frontLogoY:76,frontLogoScale:80}),
+    extras:[],front:"y2k",back:"y2k"
+  },
   polaroid:{
     id:"polaroid",label:"03. Polaroid",category:"photo",
     defaults:common({font:"Libre Baskerville",fontSize:33,tracking:2,textX:365,textY:887,frontLogoX:90,frontLogoY:881,frontLogoScale:76}),
     extras:[],front:"polaroid",back:"polaroid"
+  },
+  film:{
+    id:"film",label:"04. Film Frame",category:"photo",
+    defaults:common({font:"Oswald",fontSize:34,tracking:4,textX:325,textY:936,frontLogoX:325,frontLogoY:52,frontLogoScale:68}),
+    extras:[],front:"film",back:"film"
   },
   magazine:{
     id:"magazine",label:"05. Magazine Cover",category:"editorial",
     defaults:common({font:"Bodoni Moda",fontSize:52,tracking:2,textX:325,textY:106,backStyle:"diagonal",frontLogoX:566,frontLogoY:222,frontLogoScale:88}),
     extras:[],front:"magazine",back:"magazine"
   },
+  luxury:{
+    id:"luxury",label:"06. Luxury Gold",category:"luxury",
+    defaults:common({font:"Prata",fontSize:37,tracking:3,textX:325,textY:906,frontLogoX:325,frontLogoY:64,frontLogoScale:78}),
+    extras:[],front:"luxury",back:"luxury"
+  },
+  princess:{
+    id:"princess",label:"07. Princess Frame",category:"cute",
+    defaults:common({font:"Cormorant Garamond",fontSize:46,tracking:3,textX:325,textY:902,frontLogoX:325,frontLogoY:78,frontLogoScale:76}),
+    extras:[],front:"princess",back:"princess"
+  },
+  gothic:{
+    id:"gothic",label:"08. Gothic / Dark Romance",category:"dark",
+    defaults:common({font:"Cinzel",fontSize:37,tracking:4,textX:325,textY:910,frontLogoX:325,frontLogoY:68,frontLogoScale:76}),
+    extras:[],front:"gothic",back:"gothic"
+  },
+  angel:{
+    id:"angel",label:"09. Angel / Heaven",category:"soft",
+    defaults:common({font:"Great Vibes",fontSize:50,tracking:1,textX:325,textY:898,frontLogoX:325,frontLogoY:76,frontLogoScale:74}),
+    extras:[],front:"angel",back:"angel"
+  },
+  cyber:{
+    id:"cyber",label:"10. Cyber / Hologram",category:"tech",
+    defaults:common({font:"Orbitron",fontSize:29,tracking:3,textX:325,textY:916,frontLogoX:560,frontLogoY:78,frontLogoScale:70}),
+    extras:[],front:"cyber",back:"cyber"
+  },
+  arcade:{
+    id:"arcade",label:"11. Arcade / Pixel",category:"game",
+    defaults:common({font:"Press Start 2P",fontSize:22,tracking:1,textX:325,textY:916,frontLogoX:552,frontLogoY:80,frontLogoScale:72}),
+    extras:[],front:"arcade",back:"arcade"
+  },
   minimal:{
     id:"minimal",label:"14. Minimal Line",category:"minimal",
     defaults:common({font:"Inter",fontSize:29,tracking:5,textX:150,textY:922,frontLogoX:575,frontLogoY:66,frontLogoScale:78}),
     extras:[],front:"minimal",back:"minimal"
+  },
+  editorial:{
+    id:"editorial",label:"15. Editorial Grid",category:"editorial",
+    defaults:common({font:"Space Grotesk",fontSize:43,tracking:1,textX:438,textY:874,frontLogoX:91,frontLogoY:72,frontLogoScale:70}),
+    extras:[],front:"editorial",back:"editorial"
+  },
+  split:{
+    id:"split",label:"16. Split Color",category:"modern",
+    defaults:common({font:"Poppins",fontSize:38,tracking:3,textX:155,textY:862,frontLogoX:132,frontLogoY:106,frontLogoScale:78}),
+    extras:[],front:"split",back:"split"
   },
   student_id:{
     id:"student_id",label:"22. Student ID",category:"special",
@@ -57,7 +113,7 @@ export const TEMPLATE_REGISTRY={
   },
   trump:{
     id:"trump",label:"40. Trump Card",category:"special",
-    defaults:common({font:"Playfair Display",fontSize:34,tracking:4,textX:325,textY:910,backStyle:"center",frontLogoX:572,frontLogoY:72,frontLogoScale:72,trumpSuit:"diamond",trumpRank:"A"}),
+    defaults:common({font:"Playfair Display",fontSize:34,tracking:4,textX:325,textY:910,backStyle:"center",frontLogoX:572,frontLogoY:72,frontLogoScale:72,trumpSuit:"diamond",trumpRank:"A",trumpSuitColor:"auto",trumpRankColor:"auto"}),
     extras:["trumpOptions"],front:"trump",back:"trump"
   },
   signature:{
@@ -68,7 +124,7 @@ export const TEMPLATE_REGISTRY={
 };
 
 export function getTemplate(id){return TEMPLATE_REGISTRY[id]||TEMPLATE_REGISTRY.ribbon}
-export function getTemplateList(){return Object.values(TEMPLATE_REGISTRY)}
+export function getTemplateList(){return Object.values(TEMPLATE_REGISTRY).sort((a,b)=>(parseInt(a.label)||999)-(parseInt(b.label)||999))}
 
 const rgba=(hex,a=1)=>{
   const s=String(hex||"#000000").replace("#","").padEnd(6,"0");
@@ -96,6 +152,12 @@ function suitInfo(id){
     club:{symbol:"♣",color:"#111111"}
   }[id]||{symbol:"♦",color:"#E6002D"}
 }
+function overrideColor(value,fallback){return /^#[0-9A-F]{6}$/i.test(String(value||""))?value:fallback}
+function strokeRound(ctx,x,y,w,h,r,color,width=1){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.stroke();ctx.restore()}
+function star(ctx,x,y,outer,inner,color,rotation=-Math.PI/2,points=5){ctx.save();ctx.fillStyle=color;ctx.beginPath();for(let i=0;i<points*2;i++){const a=rotation+i*Math.PI/points,r=i%2?inner:outer,px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;i?ctx.lineTo(px,py):ctx.moveTo(px,py)}ctx.closePath();ctx.fill();ctx.restore()}
+function tinyBow(ctx,x,y,s,color){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,y);ctx.bezierCurveTo(x-s*.18,y-s*.12,x-s*.55,y-s*.28,x-s*.62,y);ctx.bezierCurveTo(x-s*.55,y+s*.24,x-s*.18,y+s*.18,x,y);ctx.bezierCurveTo(x+s*.18,y+s*.18,x+s*.55,y+s*.24,x+s*.62,y);ctx.bezierCurveTo(x+s*.55,y-s*.28,x+s*.18,y-s*.12,x,y);ctx.stroke();ctx.beginPath();ctx.moveTo(x-2,y+3);ctx.lineTo(x-10,y+s*.65);ctx.moveTo(x+2,y+3);ctx.lineTo(x+10,y+s*.65);ctx.stroke();ctx.restore()}
+function pixelHeart(ctx,x,y,size,color){const u=size/5,pts=[[1,0],[3,0],[0,1],[1,1],[2,1],[3,1],[4,1],[0,2],[1,2],[2,2],[3,2],[4,2],[1,3],[2,3],[3,3],[2,4]];ctx.save();ctx.fillStyle=color;for(const [px,py] of pts)ctx.fillRect(x+(px-2.5)*u,y+(py-2)*u,u+.5,u+.5);ctx.restore()}
+function checker(ctx,x,y,w,h,cell,c1,c2,alpha=1){ctx.save();ctx.globalAlpha=alpha;for(let yy=0;yy<h;yy+=cell)for(let xx=0;xx<w;xx+=cell){ctx.fillStyle=((xx/cell+yy/cell)&1)?c1:c2;ctx.fillRect(x+xx,y+yy,Math.min(cell,w-xx),Math.min(cell,h-yy))}ctx.restore()}
 
 async function frontRibbon(e){
   e.photoRect(0,0,e.W,e.H,e.R);e.ribbonFrame(false);
