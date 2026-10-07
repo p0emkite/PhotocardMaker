@@ -107,8 +107,47 @@ function groupLogoPreview(src){
   const img=$("groupLogoPreview"),empty=$("groupLogoPreviewEmpty");
   if(src){img.src=src;img.hidden=false;empty.hidden=true}else{img.removeAttribute("src");img.hidden=true;empty.hidden=false}
 }
+function svgTextToDataUrl(svg){
+  const bytes=new TextEncoder().encode(svg);let binary="";
+  const chunk=0x8000;
+  for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,i+chunk));
+  return "data:image/svg+xml;base64,"+btoa(binary)
+}
+function sanitizeSvgText(raw){
+  if(typeof raw!=="string"||!raw.trim())throw new Error("빈 SVG 파일입니다.");
+  if(raw.length>1500000)throw new Error("SVG 파일이 너무 큽니다. 1.5MB 이하 로고를 사용해 주세요.");
+  const doc=new DOMParser().parseFromString(raw,"image/svg+xml");
+  if(doc.querySelector("parsererror")||doc.documentElement?.localName!=="svg")throw new Error("올바른 SVG 파일이 아닙니다.");
+  const root=doc.documentElement;
+  ["script","foreignObject","iframe","object","embed","link","meta"].forEach(tag=>root.querySelectorAll(tag).forEach(el=>el.remove()));
+  for(const el of [root,...root.querySelectorAll("*")]){
+    for(const attr of [...el.attributes]){
+      const name=attr.name.toLowerCase(),value=String(attr.value||"").trim();
+      if(name.startsWith("on")){el.removeAttribute(attr.name);continue}
+      if(name==="href"||name==="xlink:href"){
+        if(!(value.startsWith("#")||value.startsWith("data:image/")))el.removeAttribute(attr.name);
+        continue
+      }
+      if((name==="style"||name==="filter"||name==="fill"||name==="stroke")&&/url\(\s*['"]?(?:https?:|\/\/)/i.test(value))el.removeAttribute(attr.name)
+    }
+  }
+  root.querySelectorAll("style").forEach(style=>{
+    let css=style.textContent||"";
+    css=css.replace(/@import[^;]+;?/gi,"").replace(/url\(\s*['"]?(?:https?:|\/\/)[^)]+\)/gi,"none");
+    style.textContent=css
+  });
+  if(!root.getAttribute("xmlns"))root.setAttribute("xmlns","http://www.w3.org/2000/svg");
+  const serialized=new XMLSerializer().serializeToString(root);
+  if(!/<(?:path|rect|circle|ellipse|polygon|polyline|line|text|g|use)\b/i.test(serialized))throw new Error("표시할 수 있는 SVG 로고 요소를 찾지 못했습니다.");
+  return serialized
+}
 async function optimizeGroupLogo(file){
   if(!file)return null;
+  const isSvg=file.type==="image/svg+xml"||/\.svg$/i.test(file.name||"");
+  if(isSvg){
+    const clean=sanitizeSvgText(await file.text());
+    return svgTextToDataUrl(clean)
+  }
   const bmp=await createImageBitmap(file,{imageOrientation:"from-image"}),max=900,scale=Math.min(1,max/Math.max(bmp.width,bmp.height)),w=Math.max(1,Math.round(bmp.width*scale)),h=Math.max(1,Math.round(bmp.height*scale));
   const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(bmp,0,0,w,h);bmp.close?.();
   let url=c.toDataURL("image/webp",.92);if(!url.startsWith("data:image/webp"))url=c.toDataURL("image/png");
@@ -141,7 +180,14 @@ function renderGroupManagerList(){
 }
 function openGroupManager(){resetGroupEditor();$("groupManagerDialog").showModal()}
 async function chooseGroupLogo(file){
-  if(!file)return;try{groupStatus("로고를 최적화하고 있습니다…");pendingGroupLogo=await optimizeGroupLogo(file);groupLogoPreview(pendingGroupLogo);groupStatus("로고 준비 완료.","ok")}catch(e){groupStatus("로고 불러오기 실패: "+e.message,"error")}
+  if(!file)return;
+  try{
+    const isSvg=file.type==="image/svg+xml"||/\.svg$/i.test(file.name||"");
+    groupStatus(isSvg?"SVG 로고를 읽고 안전하게 정리하고 있습니다…":"로고를 최적화하고 있습니다…");
+    pendingGroupLogo=await optimizeGroupLogo(file);
+    groupLogoPreview(pendingGroupLogo);
+    groupStatus(isSvg?"SVG 벡터 로고 준비 완료 · 원본 선명도를 유지합니다.":"비트맵 로고 준비 완료 · 웹용으로 최적화했습니다.","ok")
+  }catch(e){groupStatus("로고 불러오기 실패: "+e.message,"error")}
 }
 function groupIdForNew(){return "g_"+Date.now().toString(36)}
 function saveGroup(){
