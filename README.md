@@ -43,3 +43,28 @@ Branch를 **main / (root)** 로 설정하면 됩니다.
 - 39. Signature — 사용자 사인 이미지 업로드 지원
 
 새 템플릿은 `TEMPLATE_REGISTRY`에 메타데이터를 등록하고 front/back renderer를 연결하는 방식으로 확장합니다.
+
+
+## Template QA
+
+템플릿 변경 시 GitHub Actions의 **Template QA**가 자동 실행됩니다.
+
+검사 항목:
+
+- 39개 템플릿 ID / 번호 / 기본 폰트 / 기본 좌표 검증
+- 이름 및 앞·뒷면 그룹 로고 기본 좌표 범위 검증
+- 템플릿별 extra field / back style 유효성 검증
+- 39개 템플릿의 **앞면 + 뒷면 총 78개 렌더러 스모크 테스트**
+- 렌더 도중 정의되지 않은 helper 또는 런타임 오류가 발생하면 CI 실패
+
+로컬 정적 QA:
+
+```bash
+npm test
+```
+
+브라우저 시각 QA:
+
+- GitHub Pages의 `/qa.html`
+- 합성 샘플 사진과 로고를 이용해 모든 템플릿의 앞/뒷면을 한 화면에서 비교
+- 오류가 발생한 템플릿은 빨간 카드로 표시
