@@ -1,8 +1,10 @@
-import {FONT_REGISTRY,FONT_MAP,TEMPLATE_REGISTRY,getTemplate,getTemplateList,renderTemplateFront,renderTemplateBack} from "./templates.js?v=8";
+import {FONT_REGISTRY,FONT_MAP,TEMPLATE_REGISTRY,getTemplate,getTemplateList,renderTemplateFront,renderTemplateBack} from "./templates.js?v=9";
 const $=id=>document.getElementById(id);
 const W=650,H=1004,R=38;
 const STORAGE_KEY="photocard-maker-v2-defaults";
 const TEMPLATE_DEFAULTS_KEY="photocard-maker-template-defaults-v1";
+const TEMPLATE_FAVORITES_KEY="photocard-maker-template-favorites-v1";
+const TEMPLATE_RECENTS_KEY="photocard-maker-template-recents-v1";
 const COLOR_KEY="photocard-maker-v2-custom-colors";
 const PROGRESS_KEY="photocard-maker-v2-excel-progress";
 const DB_NAME="photocard-maker-storage",DB_STORE="handles",DB_KEY="folder";
@@ -19,6 +21,8 @@ const CUTOUT_CONFIG={model:"isnet",output:{format:"image/png",quality:1}};
 function webGpuAvailable(){return typeof navigator!=="undefined"&&!!navigator.gpu}
 let batchRows=[],batchFiles=[],excelRows=[],selectedId=null,sortCol=null,sortDesc=false,filters=Object.fromEntries(COLUMNS.map(c=>[c,""]));
 let editColorName=null;
+let templateBrowserFilter="all",templateThumbToken=0,templateThumbPlaceholder=null;
+const templateThumbCache=new Map();
 const assetCache=new Map();
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -59,12 +63,97 @@ function initColors(){colorOptions("elementColorSelect","샴페인 골드");colo
 
 function initGroups(){const s=$("groupSelect");s.innerHTML=Object.entries(GROUPS).map(([id,g])=>`<option value="${esc(id)}">${esc(g.label)}</option>`).join("");s.value="IVE"}
 function initTemplates(){const s=$("templateSelect");s.innerHTML=getTemplateList().map(t=>`<option value="${esc(t.id)}">${esc(t.label)}</option>`).join("");if(!TEMPLATE_REGISTRY[s.value])s.value="ribbon"}
+const TEMPLATE_BROWSER_FILTERS=[
+  ["all","전체"],["favorite","★ 즐겨찾기"],["recent","최근 사용"],
+  ["classic","클래식·포토"],["cute","큐트·감성"],["dark","다크·테크"],["sport","스포츠"],["seasonal","시즌"],["special","스페셜"]
+];
+function templateBrowserGroup(category){
+  if(["classic","photo","editorial","luxury","minimal","modern"].includes(category))return"classic";
+  if(["cute","soft","romantic","paper"].includes(category))return"cute";
+  if(["dark","tech","game","glow"].includes(category))return"dark";
+  if(category==="sport")return"sport";
+  if(category==="seasonal")return"seasonal";
+  return"special"
+}
+function templateFavorites(){return new Set(loadJson(TEMPLATE_FAVORITES_KEY,[]))}
+function templateRecents(){return loadJson(TEMPLATE_RECENTS_KEY,[]).filter(id=>TEMPLATE_REGISTRY[id])}
+function recordTemplateRecent(id){
+  if(!TEMPLATE_REGISTRY[id])return;
+  const list=[id,...templateRecents().filter(x=>x!==id)].slice(0,8);
+  saveJson(TEMPLATE_RECENTS_KEY,list)
+}
+function toggleTemplateFavorite(id){
+  const set=templateFavorites();set.has(id)?set.delete(id):set.add(id);saveJson(TEMPLATE_FAVORITES_KEY,[...set]);renderTemplateBrowser()
+}
+function templateThumbPhoto(){
+  if(templateThumbPlaceholder)return templateThumbPlaceholder;
+  const c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");
+  const g=x.createLinearGradient(0,0,W,H);g.addColorStop(0,"#9CB8D5");g.addColorStop(.52,"#F0C8C1");g.addColorStop(1,"#D8C5EA");x.fillStyle=g;x.fillRect(0,0,W,H);
+  x.fillStyle="rgba(255,255,255,.35)";for(let y=50;y<H;y+=94)for(let xx=52;xx<W;xx+=104){x.beginPath();x.arc(xx+(y%188?22:0),y,20,0,Math.PI*2);x.fill()}
+  x.fillStyle="#F0D1C4";x.beginPath();x.arc(W/2,330,128,0,Math.PI*2);x.fill();
+  x.fillStyle="#433A46";x.beginPath();x.arc(W/2,286,132,Math.PI,Math.PI*2);x.lineTo(W/2+126,356);x.quadraticCurveTo(W/2,246,W/2-126,356);x.closePath();x.fill();
+  x.fillStyle="#5C5D7B";x.beginPath();x.moveTo(125,H);x.quadraticCurveTo(150,560,W/2,535);x.quadraticCurveTo(W-150,560,W-125,H);x.closePath();x.fill();
+  templateThumbPlaceholder=c;return c
+}
+function renderTemplateBrowserFilters(){
+  const root=$("templateFilterChips");if(!root)return;
+  root.innerHTML=TEMPLATE_BROWSER_FILTERS.map(([id,label])=>`<button type="button" class="template-filter-chip${templateBrowserFilter===id?" active":""}" data-filter="${id}">${label}</button>`).join("");
+  root.querySelectorAll(".template-filter-chip").forEach(b=>b.onclick=()=>{templateBrowserFilter=b.dataset.filter;renderTemplateBrowserFilters();renderTemplateBrowser()})
+}
+function templateBrowserItems(){
+  const q=($("templateSearchInput")?.value||"").trim().toLowerCase(),fav=templateFavorites(),recent=templateRecents();
+  let items=getTemplateList();
+  if(templateBrowserFilter==="favorite")items=items.filter(t=>fav.has(t.id));
+  else if(templateBrowserFilter==="recent")items=recent.map(id=>TEMPLATE_REGISTRY[id]).filter(Boolean);
+  else if(templateBrowserFilter!=="all")items=items.filter(t=>templateBrowserGroup(t.category)===templateBrowserFilter);
+  if(q)items=items.filter(t=>`${t.label} ${t.id} ${t.category}`.toLowerCase().includes(q));
+  return items
+}
+function syncTemplateBrowserSelected(){
+  const root=$("templateBrowserGrid");if(!root)return;const id=$("templateSelect")?.value;
+  root.querySelectorAll(".template-browser-card").forEach(c=>c.classList.toggle("selected",c.dataset.id===id))
+}
+async function renderTemplateThumb(id,img,el,token){
+  const t=getTemplate(id),base=ctrl(),d=templateDefaultState(id),source=photo||templateThumbPhoto();
+  const sourceKey=photoFile?.name||"sample",key=[id,base.group,sourceKey,base.element,base.text,base.background].join("|");
+  if(templateThumbCache.has(key)){if(token!==templateThumbToken)return;const im=document.createElement("img");im.className="template-thumb";im.alt=t.label;im.src=templateThumbCache.get(key);el.replaceChildren(im);return}
+  const full=document.createElement("canvas"),c={...base,...d,template:id,name:base.name||"SAMPLE",fx:50,fy:50,zoom:100};
+  try{await renderFront(full,source,c);if(token!==templateThumbToken)return;const small=document.createElement("canvas");small.width=195;small.height=301;small.getContext("2d").drawImage(full,0,0,195,301);const url=small.toDataURL("image/jpeg",.82);templateThumbCache.set(key,url);const im=document.createElement("img");im.className="template-thumb";im.alt=t.label;im.src=url;el.replaceChildren(im)}
+  catch(e){if(token!==templateThumbToken)return;el.innerHTML=`<div class="template-thumb-placeholder">미리보기 오류<br>${esc(e.message)}</div>`}
+}
+async function renderTemplateBrowserThumbs(items){
+  const token=++templateThumbToken;
+  for(let i=0;i<items.length;i++){
+    if(token!==templateThumbToken)return;
+    const el=document.querySelector(`.template-thumb-wrap[data-thumb="${CSS.escape(items[i].id)}"]`);
+    if(el)await renderTemplateThumb(items[i].id,null,el,token);
+    if(i%3===2)await new Promise(requestAnimationFrame)
+  }
+}
+function renderTemplateBrowser(){
+  const root=$("templateBrowserGrid");if(!root)return;
+  const items=templateBrowserItems(),fav=templateFavorites(),selected=$("templateSelect").value;
+  $("templateBrowserCount").textContent=`${items.length}개 표시`;
+  if(!items.length){root.innerHTML='<div class="template-browser-empty">조건에 맞는 템플릿이 없습니다.</div>';return}
+  root.innerHTML=items.map(t=>`<div class="template-browser-card${selected===t.id?" selected":""}" role="button" tabindex="0" data-id="${esc(t.id)}">
+    <button type="button" class="template-favorite-btn${fav.has(t.id)?" active":""}" data-favorite="${esc(t.id)}" title="즐겨찾기">${fav.has(t.id)?"★":"☆"}</button>
+    <div class="template-thumb-wrap" data-thumb="${esc(t.id)}"><div class="template-thumb-placeholder">미리보기 생성 중…</div></div>
+    <div class="template-card-info"><div class="template-card-title">${esc(t.label)}</div><div class="template-card-category">${esc(TEMPLATE_BROWSER_FILTERS.find(x=>x[0]===templateBrowserGroup(t.category))?.[1]||t.category)}</div></div>
+  </div>`).join("");
+  root.querySelectorAll(".template-favorite-btn").forEach(b=>b.onclick=e=>{e.stopPropagation();toggleTemplateFavorite(b.dataset.favorite)});
+  const choose=card=>{const id=card.dataset.id;recordTemplateRecent(id);applyTemplateDefaults(id,true);$("templateBrowserDialog").close()};
+  root.querySelectorAll(".template-browser-card").forEach(card=>{card.onclick=()=>choose(card);card.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();choose(card)}}});
+  renderTemplateBrowserThumbs(items)
+}
+function openTemplateBrowser(){
+  renderTemplateBrowserFilters();renderTemplateBrowser();$("templateBrowserDialog").showModal();setTimeout(()=>$("templateSearchInput").focus(),0)
+}
 function initFonts(){const s=$("fontSelect"),groups={serif:"Serif",sans:"Sans Serif",script:"Script",display:"Display"};s.innerHTML=Object.entries(groups).map(([cat,label])=>{const opts=FONT_REGISTRY.filter(f=>f.category===cat).map(f=>`<option value="${esc(f.name)}">${esc(f.name)}</option>`).join("");return opts?`<optgroup label="${label}">${opts}</optgroup>`:""}).join("");s.value="Playfair Display"}
 function templateIdFromValue(v){const q=String(v||"").trim().toLowerCase();if(TEMPLATE_REGISTRY[q])return q;const aliases={"리본":"ribbon","ribbon classic":"ribbon","y2k":"y2k","y2k sticker":"y2k","film":"film","film frame":"film","polaroid":"polaroid","폴라로이드":"polaroid","magazine cover":"magazine","매거진":"magazine","luxury":"luxury","luxury gold":"luxury","princess":"princess","princess frame":"princess","gothic":"gothic","dark romance":"gothic","angel":"angel","heaven":"angel","cyber":"cyber","hologram":"cyber","arcade":"arcade","pixel":"arcade","minimal line":"minimal","미니멀":"minimal","editorial grid":"editorial","editorial":"editorial","split color":"split","split":"split","gradient glow":"gradient_glow","글로우":"gradient_glow","neon sign":"neon","네온":"neon","scrapbook":"scrapbook","스크랩북":"scrapbook","diary":"diary","notebook":"diary","다이어리":"diary","love letter":"love_letter","러브레터":"love_letter","student id":"student_id","학생증":"student_id","concert ticket":"concert_ticket","콘서트 티켓":"concert_ticket","album tracklist":"album_tracklist","앨범 트랙리스트":"album_tracklist","starry night":"starry_night","별밤":"starry_night","butterfly":"butterfly","나비":"butterfly","cherry strawberry":"cherry_strawberry","cherry / strawberry":"cherry_strawberry","체리":"cherry_strawberry","cat puppy":"cat_puppy","cat / puppy":"cat_puppy","고양이 강아지":"cat_puppy","bubble pop":"bubble_pop","버블":"bubble_pop","glass acrylic":"glass_acrylic","glass / acrylic":"glass_acrylic","아크릴":"glass_acrylic","chrome":"chrome","크롬":"chrome","racing":"racing","레이싱":"racing","varsity college":"varsity","varsity / college":"varsity","바시티":"varsity","sailor marine":"sailor","sailor / marine":"sailor","마린":"sailor","christmas winter":"christmas","christmas / winter":"christmas","크리스마스":"christmas","halloween":"halloween","할로윈":"halloween","sakura":"sakura","벚꽃":"sakura","summer soda":"summer_soda","서머소다":"summer_soda","trump card":"trump","트럼프":"trump","트럼프 카드":"trump","dressing room mirror":"dressing_mirror","조명거울":"dressing_mirror","대기실 거울":"dressing_mirror","signature":"signature","사인":"signature"};if(aliases[q])return aliases[q];return getTemplateList().find(t=>t.label.toLowerCase()===q)?.id||"ribbon"}
 function updateTemplateExtras(){const t=getTemplate($("templateSelect").value),extras=new Set(t.extras||[]);$("schoolNameField").hidden=!extras.has("schoolName");$("signatureImageField").hidden=!extras.has("signatureImage");$("trumpOptionsField").hidden=!extras.has("trumpOptions");const trump=t.id==="trump";$("cutoutBtn").hidden=!trump;$("restorePhotoBtn").hidden=!trump}
 function templateUserDefaults(){return loadJson(TEMPLATE_DEFAULTS_KEY,{})}
 function templateDefaultState(id){const t=getTemplate(id),saved=templateUserDefaults()[t.id]||{};return {...(t.defaults||{}),...saved}}
-function applyTemplateDefaults(id,render=true){const t=getTemplate(id),d=templateDefaultState(t.id);$("templateSelect").value=t.id;if(d.font&&FONTS[d.font])$("fontSelect").value=d.font;if(d.fontSize!=null)$("fontSizeInput").value=d.fontSize;if(d.tracking!=null)$("trackingInput").value=d.tracking;if(d.textX!=null)$("textXInput").value=d.textX;if(d.textY!=null)$("textYInput").value=d.textY;if(d.backStyle)$("backStyleSelect").value=d.backStyle;applyBackgroundColor(d.background??"auto");if(d.schoolName!=null)$("schoolNameInput").value=d.schoolName;if(d.trumpSuit)$("trumpSuitSelect").value=d.trumpSuit;if(d.trumpRank!=null)$("trumpRankInput").value=d.trumpRank;applyTrumpColor("suit",d.trumpSuitColor??"auto");applyTrumpColor("rank",d.trumpRankColor??"auto");if(d.signatureScale!=null)setLinked("signatureScale",d.signatureScale);if(d.signatureX!=null)setLinked("signatureX",d.signatureX);if(d.signatureY!=null)setLinked("signatureY",d.signatureY);if(d.logoOutline!=null)$("logoOutlineCheck").checked=!!d.logoOutline;if(d.logoShadow!=null)$("logoShadowCheck").checked=!!d.logoShadow;setLinked("frontLogoScale",d.frontLogoScale??100);setLinked("frontLogoX",d.frontLogoX??325);setLinked("frontLogoY",d.frontLogoY??60);setLinked("backLogoScale",d.backLogoScale??100);setLinked("backLogoX",d.backLogoX??325);setLinked("backLogoY",d.backLogoY??502);updateTemplateExtras();maybeName();if(render)queue()}
+function applyTemplateDefaults(id,render=true){const t=getTemplate(id),d=templateDefaultState(t.id);$("templateSelect").value=t.id;if(d.font&&FONTS[d.font])$("fontSelect").value=d.font;if(d.fontSize!=null)$("fontSizeInput").value=d.fontSize;if(d.tracking!=null)$("trackingInput").value=d.tracking;if(d.textX!=null)$("textXInput").value=d.textX;if(d.textY!=null)$("textYInput").value=d.textY;if(d.backStyle)$("backStyleSelect").value=d.backStyle;applyBackgroundColor(d.background??"auto");if(d.schoolName!=null)$("schoolNameInput").value=d.schoolName;if(d.trumpSuit)$("trumpSuitSelect").value=d.trumpSuit;if(d.trumpRank!=null)$("trumpRankInput").value=d.trumpRank;applyTrumpColor("suit",d.trumpSuitColor??"auto");applyTrumpColor("rank",d.trumpRankColor??"auto");if(d.signatureScale!=null)setLinked("signatureScale",d.signatureScale);if(d.signatureX!=null)setLinked("signatureX",d.signatureX);if(d.signatureY!=null)setLinked("signatureY",d.signatureY);if(d.logoOutline!=null)$("logoOutlineCheck").checked=!!d.logoOutline;if(d.logoShadow!=null)$("logoShadowCheck").checked=!!d.logoShadow;setLinked("frontLogoScale",d.frontLogoScale??100);setLinked("frontLogoX",d.frontLogoX??325);setLinked("frontLogoY",d.frontLogoY??60);setLinked("backLogoScale",d.backLogoScale??100);setLinked("backLogoX",d.backLogoX??325);setLinked("backLogoY",d.backLogoY??502);updateTemplateExtras();maybeName();syncTemplateBrowserSelected();if(render)queue()}
 function currentTemplateDefaultPayload(){const c=ctrl();return{font:c.font,fontSize:c.fontSize,tracking:c.tracking,textX:c.textX,textY:c.textY,backStyle:c.backStyle,background:c.background,frontLogoScale:c.frontLogoScale,frontLogoX:c.frontLogoX,frontLogoY:c.frontLogoY,backLogoScale:c.backLogoScale,backLogoX:c.backLogoX,backLogoY:c.backLogoY,logoOutline:c.logoOutline,logoShadow:c.logoShadow,schoolName:c.schoolName,trumpSuit:c.trumpSuit,trumpRank:c.trumpRank,trumpSuitColor:c.trumpSuitColor,trumpRankColor:c.trumpRankColor,signatureScale:c.signatureScale,signatureX:c.signatureX,signatureY:c.signatureY}}
 function saveCurrentTemplateDefaults(){const id=$("templateSelect").value,all=templateUserDefaults();all[id]=currentTemplateDefaultPayload();saveJson(TEMPLATE_DEFAULTS_KEY,all);status(getTemplate(id).label+" 기본값을 저장했습니다.",false,true)}
 function resetCurrentTemplateDefaults(){const id=$("templateSelect").value,all=templateUserDefaults();delete all[id];saveJson(TEMPLATE_DEFAULTS_KEY,all);applyTemplateDefaults(id,true);status(getTemplate(id).label+" 기본값을 초기화했습니다.",false,true)}
@@ -153,7 +242,7 @@ function setLinked(p,v){$(p+"Range").value=v;$(p+"Number").value=v}
 function bindRange(p,min,max){const r=$(p+"Range"),n=$(p+"Number"),sync=(a,b)=>{const v=clamp(+a.value||0,min,max);b.value=v;queue()};r.oninput=()=>sync(r,n);n.oninput=()=>sync(n,r)}
 function updateGuide(){$("centerGuide").style.display=$("centerGuideCheck").checked&&currentSide==="front"?"block":"none"}
 async function setWorkingPhoto(blob,label="사진"){if(!blob)return;photo?.close?.();photo=await createImageBitmap(blob,{imageOrientation:"from-image"});workingPhotoBlob=blob;photoFile={name:label};$("previewStage").classList.add("has-image");$("previewHint").textContent=label;$("generateBtn").disabled=false;$("savePairBtn").disabled=false;$("cutoutBtn").disabled=false;queue()}
-async function choosePhoto(f){if(!f)return;try{originalPhotoFile=f;await setWorkingPhoto(f,f.name);$("restorePhotoBtn").disabled=true;status("사진을 불러왔습니다. 드래그와 휠로 위치를 조정하세요.",false,true)}catch(e){status("이미지 불러오기 실패: "+e.message,true)}}
+async function choosePhoto(f){if(!f)return;try{templateThumbCache.clear();originalPhotoFile=f;await setWorkingPhoto(f,f.name);$("restorePhotoBtn").disabled=true;status("사진을 불러왔습니다. 드래그와 휠로 위치를 조정하세요.",false,true)}catch(e){status("이미지 불러오기 실패: "+e.message,true)}}
 async function doCutout(){if(!workingPhotoBlob)return;const btn=$("cutoutBtn");btn.disabled=true;try{status("AI 누끼 모델을 준비하고 있습니다. 최초 실행은 다운로드 때문에 오래 걸릴 수 있습니다.");if(!cutoutModule)cutoutModule=await import("https://esm.sh/@imgly/background-removal@1.5.6");const progress=(key,current,total)=>status(`AI 누끼 처리 중: ${key} ${Math.round((current/Math.max(1,total))*100)}%`);let out;if(webGpuAvailable()){try{status("AI 누끼: WebGPU로 처리 중...");out=await cutoutModule.removeBackground(workingPhotoBlob,{...CUTOUT_CONFIG,device:"gpu",progress})}catch(gpuError){console.warn("WebGPU 누끼 실패, CPU/WASM으로 재시도:",gpuError);status("WebGPU 처리 실패. CPU/WASM으로 자동 재시도합니다.");out=await cutoutModule.removeBackground(workingPhotoBlob,{...CUTOUT_CONFIG,device:"cpu",progress})}}else{status("WebGPU 미지원 환경입니다. CPU/WASM으로 처리합니다.");out=await cutoutModule.removeBackground(workingPhotoBlob,{...CUTOUT_CONFIG,device:"cpu",progress})}await setWorkingPhoto(out,webGpuAvailable()?"AI 누끼 적용됨 (WebGPU 우선)":"AI 누끼 적용됨");$("restorePhotoBtn").disabled=false;status("AI 누끼를 적용했습니다.",false,true)}catch(e){console.error(e);status(`AI 누끼 실패: ${e.message}. PNG 투명 배경 이미지를 직접 넣어도 됩니다.`,true)}finally{btn.disabled=false}}
 async function restoreOriginalPhoto(){if(!originalPhotoFile)return;try{await setWorkingPhoto(originalPhotoFile,originalPhotoFile.name+" (원본)");$("restorePhotoBtn").disabled=true;status("원본 사진으로 복원했습니다.",false,true)}catch(e){status("원본 복원 실패: "+e.message,true)}}
 function switchSide(side){currentSide=side;$("frontTabBtn").classList.toggle("active",side==="front");$("backTabBtn").classList.toggle("active",side==="back");$("previewStage").classList.toggle("back-side",side==="back");$("previewHelp").innerHTML=side==="front"?"<b>드래그</b>: 위치 이동 · <b>마우스 휠</b>: 확대/축소":"뒷면은 그룹 로고와 프레임을 자동 배치합니다.";$("generateBtn").textContent=side==="front"?"앞면 저장":"뒷면 저장";if(side==="back"){$("previewStage").classList.add("has-image");$("previewHint").textContent="뒷면 미리보기"}else{$("previewHint").textContent=photoFile?.name||"이미지를 선택하세요";$("previewStage").classList.toggle("has-image",!!photo)}$("generateBtn").disabled=side==="front"?!photo:false;updateGuide();queue()}
@@ -193,7 +282,7 @@ async function loadExcelPanel(file){if(!file)return;try{excelRows=(await parseEx
 function saveProgress(){saveJson(PROGRESS_KEY,{rows:excelRows,selectedId,sortCol,sortDesc,filters,hint:$("excelDataHint").textContent});excelStatus("진행 상태를 저장했습니다.")}
 function restoreProgress(){const p=loadJson(PROGRESS_KEY,null);if(!p?.rows?.length)return;excelRows=p.rows;selectedId=p.selectedId||null;sortCol=p.sortCol||null;sortDesc=!!p.sortDesc;filters={...Object.fromEntries(COLUMNS.map(c=>[c,""])),...(p.filters||{})};$("excelDataHint").textContent=p.hint||"저장된 작업 상태 복원";renderExcelHead();renderExcelBody();excelStatus("이전 작업 상태를 복원했습니다.")}
 
-function bind(){bindRange("focusX",0,100);bindRange("focusY",0,100);bindRange("zoom",100,500);bindRange("frontLogoScale",40,200);bindRange("frontLogoX",0,650);bindRange("frontLogoY",0,1004);bindRange("backLogoScale",40,200);bindRange("backLogoX",0,650);bindRange("backLogoY",0,1004);bindRange("signatureScale",40,220);bindRange("signatureX",0,650);bindRange("signatureY",0,1004);bindGestures();$("photoInput").onchange=e=>choosePhoto(e.target.files?.[0]);$("cutoutBtn").onclick=doCutout;$("restorePhotoBtn").onclick=restoreOriginalPhoto;$("nameInput").oninput=()=>{maybeName();queue()};$("templateSelect").onchange=()=>applyTemplateDefaults($("templateSelect").value,true);$("schoolNameInput").oninput=queue;$("trumpSuitSelect").onchange=()=>{syncTrumpPicker("suit");syncTrumpPicker("rank");queue()};$("trumpRankInput").oninput=queue;$("trumpSuitColorSelect").onchange=()=>{syncTrumpPicker("suit");queue()};$("trumpRankColorSelect").onchange=()=>{syncTrumpPicker("rank");queue()};$("trumpSuitColorPicker").oninput=()=>trumpPickerToSelect("suit");$("trumpRankColorPicker").oninput=()=>trumpPickerToSelect("rank");$("signatureInput").onchange=e=>chooseSignature(e.target.files?.[0]);$("clearSignatureBtn").onclick=clearSignature;$("groupSelect").onchange=queue;$("backStyleSelect").onchange=queue;$("fontSelect").onchange=queue;$("logoOutlineCheck").onchange=queue;$("logoShadowCheck").onchange=queue;$("elementColorSelect").onchange=()=>{syncPicker("element");queue()};$("textColorSelect").onchange=()=>{syncPicker("text");queue()};$("backgroundColorSelect").onchange=()=>{syncBackgroundPicker();queue()};$("elementColorPicker").oninput=()=>pickerToSelect("element");$("textColorPicker").oninput=()=>pickerToSelect("text");$("backgroundColorPicker").oninput=backgroundPickerToSelect;["trackingInput","fontSizeInput","textXInput","textYInput","shadowCheck","strokeColorPicker","strokeWidthInput"].forEach(id=>$(id).oninput=queue);$("resetCropBtn").onclick=()=>{setLinked("focusX",50);setLinked("focusY",50);setLinked("zoom",100);queue()};$("resetTextBtn").onclick=()=>{Object.assign($("trackingInput"),{value:4});$("fontSizeInput").value=31;$("textXInput").value=325;$("textYInput").value=903;$("shadowCheck").checked=true;$("strokeColorPicker").value="#FFFFFF";$("strokeWidthInput").value=1;queue()};$("centerGuideCheck").oninput=updateGuide;$("frontTabBtn").onclick=()=>switchSide("front");$("backTabBtn").onclick=()=>switchSide("back");$("filenameInput").oninput=()=>filenameEdited=true;$("generateBtn").onclick=saveCurrent;$("savePairBtn").onclick=savePair;$("savePathBtn").onclick=pickFolder;$("saveDefaultsBtn").onclick=saveCurrentTemplateDefaults;$("resetDefaultsBtn").onclick=resetCurrentTemplateDefaults;$("sampleExcelBtn").onclick=sampleExcel;$("excelInput").onchange=prepareBatch;$("imageFolderInput").onchange=prepareBatch;$("batchBtn").onclick=runBatch;$("excelDataLoadBtn").onclick=()=>$("excelDataInput").click();$("excelDataInput").onchange=e=>loadExcelPanel(e.target.files?.[0]);$("excelProgressSaveBtn").onclick=saveProgress;$("openColorManagerBtn").onclick=openColorManager;$("addCustomColorBtn").onclick=saveCustomColor;$("customColorPicker").oninput=e=>$("customColorHex").value=e.target.value.toUpperCase();$("customColorHex").oninput=e=>{const v=normalizeHex(e.target.value);if(v)$("customColorPicker").value=v}}
+function bind(){bindRange("focusX",0,100);bindRange("focusY",0,100);bindRange("zoom",100,500);bindRange("frontLogoScale",40,200);bindRange("frontLogoX",0,650);bindRange("frontLogoY",0,1004);bindRange("backLogoScale",40,200);bindRange("backLogoX",0,650);bindRange("backLogoY",0,1004);bindRange("signatureScale",40,220);bindRange("signatureX",0,650);bindRange("signatureY",0,1004);bindGestures();$("photoInput").onchange=e=>choosePhoto(e.target.files?.[0]);$("cutoutBtn").onclick=doCutout;$("restorePhotoBtn").onclick=restoreOriginalPhoto;$("nameInput").oninput=()=>{maybeName();queue()};$("templateSelect").onchange=()=>{const id=$("templateSelect").value;recordTemplateRecent(id);applyTemplateDefaults(id,true)};$("openTemplateBrowserBtn").onclick=openTemplateBrowser;$("closeTemplateBrowserBtn").onclick=()=>$("templateBrowserDialog").close();$("templateSearchInput").oninput=renderTemplateBrowser;$("schoolNameInput").oninput=queue;$("trumpSuitSelect").onchange=()=>{syncTrumpPicker("suit");syncTrumpPicker("rank");queue()};$("trumpRankInput").oninput=queue;$("trumpSuitColorSelect").onchange=()=>{syncTrumpPicker("suit");queue()};$("trumpRankColorSelect").onchange=()=>{syncTrumpPicker("rank");queue()};$("trumpSuitColorPicker").oninput=()=>trumpPickerToSelect("suit");$("trumpRankColorPicker").oninput=()=>trumpPickerToSelect("rank");$("signatureInput").onchange=e=>chooseSignature(e.target.files?.[0]);$("clearSignatureBtn").onclick=clearSignature;$("groupSelect").onchange=()=>{templateThumbCache.clear();queue()};$("backStyleSelect").onchange=queue;$("fontSelect").onchange=queue;$("logoOutlineCheck").onchange=queue;$("logoShadowCheck").onchange=queue;$("elementColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("element");queue()};$("textColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("text");queue()};$("backgroundColorSelect").onchange=()=>{templateThumbCache.clear();syncBackgroundPicker();queue()};$("elementColorPicker").oninput=()=>pickerToSelect("element");$("textColorPicker").oninput=()=>pickerToSelect("text");$("backgroundColorPicker").oninput=backgroundPickerToSelect;["trackingInput","fontSizeInput","textXInput","textYInput","shadowCheck","strokeColorPicker","strokeWidthInput"].forEach(id=>$(id).oninput=queue);$("resetCropBtn").onclick=()=>{setLinked("focusX",50);setLinked("focusY",50);setLinked("zoom",100);queue()};$("resetTextBtn").onclick=()=>{Object.assign($("trackingInput"),{value:4});$("fontSizeInput").value=31;$("textXInput").value=325;$("textYInput").value=903;$("shadowCheck").checked=true;$("strokeColorPicker").value="#FFFFFF";$("strokeWidthInput").value=1;queue()};$("centerGuideCheck").oninput=updateGuide;$("frontTabBtn").onclick=()=>switchSide("front");$("backTabBtn").onclick=()=>switchSide("back");$("filenameInput").oninput=()=>filenameEdited=true;$("generateBtn").onclick=saveCurrent;$("savePairBtn").onclick=savePair;$("savePathBtn").onclick=pickFolder;$("saveDefaultsBtn").onclick=saveCurrentTemplateDefaults;$("resetDefaultsBtn").onclick=resetCurrentTemplateDefaults;$("sampleExcelBtn").onclick=sampleExcel;$("excelInput").onchange=prepareBatch;$("imageFolderInput").onchange=prepareBatch;$("batchBtn").onclick=runBatch;$("excelDataLoadBtn").onclick=()=>$("excelDataInput").click();$("excelDataInput").onchange=e=>loadExcelPanel(e.target.files?.[0]);$("excelProgressSaveBtn").onclick=saveProgress;$("openColorManagerBtn").onclick=openColorManager;$("addCustomColorBtn").onclick=saveCustomColor;$("customColorPicker").oninput=e=>$("customColorHex").value=e.target.value.toUpperCase();$("customColorHex").oninput=e=>{const v=normalizeHex(e.target.value);if(v)$("customColorPicker").value=v}}
 async function registerModelCacheWorker(){if(!("serviceWorker" in navigator))return;try{await navigator.serviceWorker.register("./service-worker.js",{scope:"./"});await navigator.serviceWorker.ready}catch(e){console.warn("모델 캐시 서비스 워커 등록 실패:",e)}}
 async function init(){registerModelCacheWorker();initFonts();initTemplates();$("fontSelect").value="Playfair Display";$("logoOutlineCheck").checked=true;$("logoShadowCheck").checked=true;initColors();initGroups();updateTemplateExtras();bind();renderExcelHead();renderExcelBody();restoreProgress();const saved=loadJson(STORAGE_KEY,null);applyTemplateDefaults("ribbon",false);if(saved?.name)$("nameInput").value=saved.name;maybeName(true);saveDir=await loadHandle();pathText();switchSide("front");status("준비 완료. 사진을 선택하세요.",false,true);loadAsset(GROUPS.IVE.logo).catch(()=>{})}
 init();
