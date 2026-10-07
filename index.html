@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Allura&family=Bebas+Neue&family=Bodoni+Moda:wght@400;600&family=Bungee&family=Caveat:wght@400;600&family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@400;600&family=DM+Serif+Display&family=Dancing+Script:wght@400;600&family=Great+Vibes&family=Inter:wght@400;600&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;600&family=Montserrat:wght@400;600&family=Orbitron:wght@400;600&family=Oswald:wght@400;600&family=Pacifico&family=Parisienne&family=Playfair+Display:wght@400;600&family=Poppins:wght@400;600&family=Prata&family=Press+Start+2P&family=Quicksand:wght@400;600&family=Raleway:wght@400;600&family=Righteous&family=Sacramento&family=Satisfy&family=Space+Grotesk:wght@400;600&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles.css?v=2">
-<link rel="stylesheet" href="./v2.css?v=11">
+<link rel="stylesheet" href="./v2.css?v=12">
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
@@ -46,7 +46,14 @@
           </div>
           <div class="field"><label>출력 크기</label><input type="text" value="650 × 1004" readonly></div>
           <div class="field full-span"><label for="nameInput">이름</label><input id="nameInput" type="text" value="WONYOUNG"></div>
-          <div class="field"><label for="groupSelect">그룹</label><select id="groupSelect"></select></div>
+          <div class="field">
+            <label for="groupSelect">그룹</label>
+            <select id="groupSelect"></select>
+            <div class="group-inline-actions">
+              <button id="applyGroupPaletteBtn" class="ghost" type="button">대표 컬러 적용</button>
+              <button id="openGroupManagerBtn" class="secondary" type="button">그룹 관리</button>
+            </div>
+          </div>
           <div class="field"><label for="backStyleSelect">뒷면 스타일</label><select id="backStyleSelect"><option value="center">중앙형</option><option value="diagonal">대각형 (-45°)</option><option value="pattern">반복 패턴형 (-30°)</option><option value="pattern45">반복 패턴형 (-45°)</option></select></div>
           <div class="field"><label>요소 컬러</label><div class="color-row"><select id="elementColorSelect"></select><input id="elementColorPicker" type="color" value="#E7C68E"></div></div>
           <div class="field"><label>텍스트 컬러</label><div class="color-row"><select id="textColorSelect"></select><input id="textColorPicker" type="color" value="#F5E5C2"></div></div>
@@ -282,6 +289,58 @@
   </aside>
 </div>
 
+<dialog id="groupManagerDialog" class="group-manager-dialog">
+  <div class="group-manager-inner">
+    <div class="dialog-head">
+      <div>
+        <h2>그룹 관리</h2>
+        <p>그룹 로고와 대표 컬러를 저장하면 포토카드·프리셋·Excel 일괄 생성에서 그대로 사용할 수 있습니다.</p>
+      </div>
+      <button id="closeGroupManagerBtn" class="ghost" type="button">닫기</button>
+    </div>
+
+    <div class="group-manager-layout">
+      <section class="group-editor">
+        <h3 id="groupEditorTitle">새 그룹 추가</h3>
+        <div class="field">
+          <label for="groupNameInput">그룹명</label>
+          <input id="groupNameInput" type="text" maxlength="40" placeholder="예: aespa">
+        </div>
+        <div class="field">
+          <label for="groupLogoInput">그룹 로고</label>
+          <input id="groupLogoInput" type="file" accept="image/png,image/jpeg,image/webp">
+          <small>투명 배경 PNG/WebP 권장 · 저장 시 웹용 크기로 자동 최적화됩니다.</small>
+        </div>
+        <div class="group-logo-preview-wrap">
+          <div id="groupLogoPreviewEmpty" class="group-logo-preview-empty">로고 미리보기</div>
+          <img id="groupLogoPreview" class="group-logo-preview" alt="그룹 로고 미리보기" hidden>
+        </div>
+
+        <div class="group-palette-editor">
+          <div class="field"><label for="groupElementColor">대표 요소 컬러</label><input id="groupElementColor" type="color" value="#E7C68E"></div>
+          <div class="field"><label for="groupTextColor">대표 텍스트 컬러</label><input id="groupTextColor" type="color" value="#F5E5C2"></div>
+          <div class="field">
+            <label for="groupBackgroundColor">대표 배경 컬러</label>
+            <input id="groupBackgroundColor" type="color" value="#FFFFFF">
+            <label class="check compact-check"><input id="groupBackgroundDefaultCheck" type="checkbox" checked> 템플릿 기본 배경 사용</label>
+          </div>
+        </div>
+
+        <div class="group-editor-actions">
+          <button id="saveGroupBtn" class="primary" type="button">그룹 저장</button>
+          <button id="resetGroupEditorBtn" class="ghost" type="button">새 그룹</button>
+        </div>
+        <div id="groupManagerStatus" class="preset-status">새 그룹을 추가하거나 오른쪽 목록에서 수정할 그룹을 선택하세요.</div>
+      </section>
+
+      <section class="group-list-section">
+        <div class="group-list-head"><h3>등록된 그룹</h3><span id="groupCountLabel"></span></div>
+        <div id="groupManagerList" class="group-manager-list"></div>
+      </section>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="colorManagerDialog" class="color-dialog">
   <form method="dialog" class="color-dialog-inner">
     <div class="dialog-head">
@@ -320,6 +379,6 @@
 </dialog>
 
 <footer>렌더링은 사용자 브라우저 안에서 실행됩니다. 사진은 서버로 업로드하지 않습니다.</footer>
-<script type="module" src="./app-v2.js?v=22"></script>
+<script type="module" src="./app-v2.js?v=23"></script>
 </body>
 </html>
