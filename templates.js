@@ -442,24 +442,24 @@ async function backStudentId(e){
 }
 
 async function frontTrump(e){
-  const {ctx,W,H,c}=e,{symbol,color}=suitInfo(c.trumpSuit);
+  const {ctx,W,H,c}=e,{symbol,color:baseColor}=suitInfo(c.trumpSuit),suitColor=overrideColor(c.trumpSuitColor,baseColor),rankColor=overrideColor(c.trumpRankColor,baseColor);
   e.backBase("#FFFDFC");
   ctx.save();ctx.strokeStyle="#111";ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(14,14,W-28,H-28,38);ctx.stroke();ctx.restore();
   // giant suit behind portrait
-  ctx.save();ctx.fillStyle=rgba(color,.16);ctx.font='700 560px Georgia,serif';ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(symbol,W/2,H/2-5);ctx.restore();
+  ctx.save();ctx.fillStyle=rgba(suitColor,.16);ctx.font='700 560px Georgia,serif';ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(symbol,W/2,H/2-5);ctx.restore();
   // Subject layer. AI-cutout PNG keeps the giant suit visible around the person.
   ctx.save();ctx.shadowColor="rgba(0,0,0,.22)";ctx.shadowBlur=16;ctx.shadowOffsetY=5;
   e.subjectRect(82,112,W-164,720,20);ctx.restore();
   // corner rank/suit
   const rank=String(c.trumpRank||"A").toUpperCase();
-  ctx.save();ctx.fillStyle=color;ctx.textAlign="center";ctx.font='500 58px "Bodoni Moda",Georgia,serif';ctx.fillText(rank,68,82);ctx.font='700 52px Georgia,serif';ctx.fillText(symbol,68,139);ctx.restore();
-  ctx.save();ctx.translate(W-68,H-82);ctx.rotate(Math.PI);ctx.fillStyle=color;ctx.textAlign="center";ctx.font='500 58px "Bodoni Moda",Georgia,serif';ctx.fillText(rank,0,0);ctx.font='700 52px Georgia,serif';ctx.fillText(symbol,0,57);ctx.restore();
+  ctx.save();ctx.textAlign="center";ctx.fillStyle=rankColor;ctx.font='500 58px "Bodoni Moda",Georgia,serif';ctx.fillText(rank,68,82);ctx.fillStyle=suitColor;ctx.font='700 52px Georgia,serif';ctx.fillText(symbol,68,139);ctx.restore();
+  ctx.save();ctx.translate(W-68,H-82);ctx.rotate(Math.PI);ctx.textAlign="center";ctx.fillStyle=rankColor;ctx.font='500 58px "Bodoni Moda",Georgia,serif';ctx.fillText(rank,0,0);ctx.fillStyle=suitColor;ctx.font='700 52px Georgia,serif';ctx.fillText(symbol,0,57);ctx.restore();
   await e.logo({w:64,effects:false});
   e.name({x:c.textX,y:c.textY,maxWidth:430,size:c.fontSize,font:c.font,fill:"#111111",stroke:"#FFFFFF",shadow:false})
 }
 async function backTrump(e){
-  const {ctx,W,H,c}=e,{symbol,color}=suitInfo(c.trumpSuit);e.backBase("#FFFDFC");
-  ctx.save();ctx.strokeStyle="#111";ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(14,14,W-28,H-28,38);ctx.stroke();ctx.fillStyle=color;ctx.globalAlpha=.92;
+  const {ctx,W,H,c}=e,{symbol,color:baseColor}=suitInfo(c.trumpSuit),suitColor=overrideColor(c.trumpSuitColor,baseColor);e.backBase("#FFFDFC");
+  ctx.save();ctx.strokeStyle="#111";ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(14,14,W-28,H-28,38);ctx.stroke();ctx.fillStyle=suitColor;ctx.globalAlpha=.92;
   for(let y=95,row=0;y<H;y+=112,row++)for(let x=60;x<W;x+=110){ctx.save();ctx.translate(x+(row%2?55:0),y);ctx.rotate(-Math.PI/7);ctx.font='700 58px Georgia,serif';ctx.textAlign="center";ctx.fillText(symbol,0,0);ctx.restore()}ctx.restore();
   await e.backLogo({maxWidth:210})
 }
