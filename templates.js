@@ -56,7 +56,7 @@ export const TEMPLATE_REGISTRY={
     extras:["schoolName"],front:"student_id",back:"student_id"
   },
   trump:{
-    id:"trump",label:"23. Trump Card",category:"special",
+    id:"trump",label:"40. Trump Card",category:"special",
     defaults:common({font:"Playfair Display",fontSize:34,tracking:4,textX:325,textY:910,backStyle:"center",frontLogoX:572,frontLogoY:72,frontLogoScale:72,trumpSuit:"diamond",trumpRank:"A"}),
     extras:["trumpOptions"],front:"trump",back:"trump"
   },
@@ -167,7 +167,7 @@ async function frontStudentId(e){
   // lower band
   ctx.save();ctx.fillStyle=c.element;ctx.fillRect(0,855,W,149);ctx.restore();
   await e.logo({w:94,effects:false});
-  centeredText(ctx,c.schoolName||"아이브고등학교",W/2+58,930,'600 30px "Montserrat",sans-serif',"#FFFFFF",2.3);
+  centeredText(ctx,c.schoolName||"아이브고등학교",Math.max(300,Math.min(W-190,(c.frontLogoX??82)+220)),930,'600 30px "Montserrat",sans-serif',"#FFFFFF",2.3);
 }
 async function backStudentId(e){
   const {ctx,W,H,c}=e;e.backBase("#FFFFFF");
