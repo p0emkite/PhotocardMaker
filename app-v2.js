@@ -13,9 +13,20 @@ const FONTS={
   "DM Serif Display":'"DM Serif Display",Georgia,serif',
   "Montserrat":'"Montserrat",Arial,sans-serif',
   "Great Vibes":'"Great Vibes",cursive',
-  "Bebas Neue":'"Bebas Neue","Arial Narrow",sans-serif'
+  "Bebas Neue":'"Bebas Neue","Arial Narrow",sans-serif',
+  "Libre Baskerville":'"Libre Baskerville",Georgia,serif',
+  "Lora":'"Lora",Georgia,serif',
+  "Abril Fatface":'"Abril Fatface",Georgia,serif',
+  "Cinzel":'"Cinzel",Georgia,serif',
+  "Poppins":'"Poppins",Arial,sans-serif',
+  "Raleway":'"Raleway",Arial,sans-serif',
+  "Pacifico":'"Pacifico",cursive',
+  "Dancing Script":'"Dancing Script",cursive',
+  "Oswald":'"Oswald","Arial Narrow",sans-serif',
+  "Quicksand":'"Quicksand",Arial,sans-serif'
 };
 const logoMaskCache=new Map();
+const logoMetricsCache=new Map();
 let customColors=loadJson(COLOR_KEY,{});
 let photo=null,photoFile=null,currentSide="front",drag=null,saveDir=null,raf=0,filenameEdited=false;
 let batchRows=[],batchFiles=[],excelRows=[],selectedId=null,sortCol=null,sortDesc=false,filters=Object.fromEntries(COLUMNS.map(c=>[c,""]));
@@ -61,10 +72,44 @@ function drawFrame(ctx,color,back=false){ctx.save();ctx.strokeStyle=color;ctx.fi
 function trackedWidth(ctx,t,sp){let w=0;for(let i=0;i<t.length;i++){w+=ctx.measureText(t[i]).width;if(i<t.length-1)w+=sp}return w}
 function drawName(ctx,c){const t=String(c.name||"").trim();if(!t)return;ctx.save();let size=c.fontSize,sp=c.tracking,family=FONTS[c.font]||FONTS["Playfair Display"];while(size>22){ctx.font=`400 ${size}px ${family}`;if(trackedWidth(ctx,t,sp)<=380)break;if(sp>1)sp--;else size--}ctx.font=`400 ${size}px ${family}`;ctx.textBaseline="middle";let x=c.textX-trackedWidth(ctx,t,sp)/2,y=903;if(c.shadow){ctx.shadowColor="rgba(0,0,0,.58)";ctx.shadowBlur=4;ctx.shadowOffsetX=2;ctx.shadowOffsetY=3}ctx.fillStyle=c.text;ctx.strokeStyle=c.stroke;ctx.lineJoin="round";ctx.lineWidth=Math.max(0,c.strokeWidth*2);for(let i=0;i<t.length;i++){const ch=t[i];if(c.strokeWidth>0)ctx.strokeText(ch,x,y);ctx.fillText(ch,x,y);x+=ctx.measureText(ch).width+(i<t.length-1?sp:0)}ctx.restore()}
 function loadAsset(path){if(!path)return Promise.resolve(null);if(assetCache.has(path))return assetCache.get(path);const p=new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("로고 로드 실패"));i.src=path});assetCache.set(path,p);return p}
+function logoMetrics(img){
+  const key=img.src||"logo";
+  if(logoMetricsCache.has(key))return logoMetricsCache.get(key);
+  const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height,c=document.createElement("canvas");
+  c.width=iw;c.height=ih;
+  const x=c.getContext("2d",{willReadFrequently:true});x.drawImage(img,0,0,iw,ih);
+  let minX=iw,minY=ih,maxX=-1,maxY=-1,sumA=0,sumX=0,sumY=0;
+  try{
+    const d=x.getImageData(0,0,iw,ih).data;
+    for(let py=0,i=3;py<ih;py++)for(let px=0;px<iw;px++,i+=4){
+      const a=d[i];
+      if(a>8){
+        if(px<minX)minX=px;if(px>maxX)maxX=px;if(py<minY)minY=py;if(py>maxY)maxY=py;
+        sumA+=a;sumX+=px*a;sumY+=py*a;
+      }
+    }
+  }catch{}
+  const found=maxX>=minX&&maxY>=minY;
+  const m=found?{cx:sumX/sumA,cy:sumY/sumA,bw:maxX-minX+1,bh:maxY-minY+1,iw,ih}:{cx:iw/2,cy:ih/2,bw:iw,bh:ih,iw,ih};
+  logoMetricsCache.set(key,m);return m
+}
 function logoMask(img,w,h){const key=(img.src||"logo")+"|"+Math.round(w)+"x"+Math.round(h);if(logoMaskCache.has(key))return logoMaskCache.get(key);const m=document.createElement("canvas");m.width=Math.max(1,Math.ceil(w));m.height=Math.max(1,Math.ceil(h));const x=m.getContext("2d");x.drawImage(img,0,0,m.width,m.height);x.globalCompositeOperation="source-in";x.fillStyle="rgba(0,0,0,.72)";x.fillRect(0,0,m.width,m.height);logoMaskCache.set(key,m);return m}
-function drawLogoInstance(ctx,img,c,cx,cy,w,alpha=1,angle=0,applyEffects=true){const h=w*(img.height/img.width);ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);ctx.globalAlpha=alpha;if(applyEffects){const mask=logoMask(img,w,h);if(c.logoShadow){ctx.shadowColor="rgba(0,0,0,.25)";ctx.shadowBlur=4;ctx.shadowOffsetX=0;ctx.shadowOffsetY=2;ctx.drawImage(img,-w/2,-h/2,w,h);ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0}if(c.logoOutline){for(const [dx,dy] of [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]])ctx.drawImage(mask,-w/2+dx,-h/2+dy,w,h)}}ctx.drawImage(img,-w/2,-h/2,w,h);ctx.restore()}
-function drawLogoPattern(ctx,img,c){const angle=-Math.PI/6;ctx.save();rounded(ctx,0,0,W,H,R);ctx.clip();for(let row=0,y=105;y<H+100;row++,y+=145){if(row%2===0){const w=108;for(let x=30;x<W+90;x+=132)drawLogoInstance(ctx,img,c,x+(row%4===2?55:0),y,w,.72,angle,false)}else{const w=190;for(let x=55;x<W+150;x+=225)drawLogoInstance(ctx,img,c,x+(row%4===3?70:0),y,w,.60,angle,false)}}ctx.restore()}
-async function drawLogo(ctx,c,back=false){const g=GROUPS[c.group];if(!g?.logo)return;let img;try{img=await loadAsset(g.logo)}catch{return}if(back&&c.backStyle==="pattern"){drawLogoPattern(ctx,img,c);return}if(back&&c.backStyle==="diagonal")drawLogoInstance(ctx,img,c,W/2,H/2,390,.96,-Math.PI/4,false);else if(back)drawLogoInstance(ctx,img,c,W/2,H/2,330,1,0,false);else drawLogoInstance(ctx,img,c,W/2,60,92,.95,0,true)}
+function drawLogoInstance(ctx,img,c,cx,cy,w,alpha=1,angle=0,applyEffects=true){
+  const m=logoMetrics(img),scale=w/m.bw,dw=m.iw*scale,dh=m.ih*scale,ox=-m.cx*scale,oy=-m.cy*scale;
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(angle);ctx.globalAlpha=alpha;
+  if(applyEffects){
+    const mask=logoMask(img,dw,dh);
+    if(c.logoShadow){
+      ctx.shadowColor="rgba(0,0,0,.25)";ctx.shadowBlur=4;ctx.shadowOffsetX=0;ctx.shadowOffsetY=2;
+      ctx.drawImage(img,ox,oy,dw,dh);
+      ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetX=0;ctx.shadowOffsetY=0
+    }
+    if(c.logoOutline)for(const [dx,dy] of [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]])ctx.drawImage(mask,ox+dx,oy+dy,dw,dh)
+  }
+  ctx.drawImage(img,ox,oy,dw,dh);ctx.restore()
+}
+function drawLogoPattern(ctx,img,c){const angle=-Math.PI/6;ctx.save();rounded(ctx,0,0,W,H,R);ctx.clip();for(let row=0,y=105;y<H+100;row++,y+=145){if(row%2===0){const w=108;for(let x=30;x<W+90;x+=132)drawLogoInstance(ctx,img,c,x+(row%4===2?55:0),y,w,1,angle,false)}else{const w=190;for(let x=55;x<W+150;x+=225)drawLogoInstance(ctx,img,c,x+(row%4===3?70:0),y,w,1,angle,false)}}ctx.restore()}
+async function drawLogo(ctx,c,back=false){const g=GROUPS[c.group];if(!g?.logo)return;let img;try{img=await loadAsset(g.logo)}catch{return}if(back&&c.backStyle==="pattern"){drawLogoPattern(ctx,img,c);return}if(back&&c.backStyle==="diagonal")drawLogoInstance(ctx,img,c,W/2,H/2,390,1,-Math.PI/4,false);else if(back)drawLogoInstance(ctx,img,c,W/2,H/2,330,1,0,false);else drawLogoInstance(ctx,img,c,W/2,60,92,.95,0,true)}
 function mixWhite(hex,a=.91){const s=colorValue(hex).slice(1),r=parseInt(s.slice(0,2),16),g=parseInt(s.slice(2,4),16),b=parseInt(s.slice(4,6),16),m=v=>Math.round(v*(1-a)+255*a);return `rgb(${m(r)},${m(g)},${m(b)})`}
 async function ensureFont(c){const family=c.font||"Playfair Display";try{await document.fonts.load(`400 ${Math.max(24,c.fontSize||31)}px "${family}"`)}catch{}}
 async function renderFront(canvas,img=photo,c=ctrl()){if(!img)return false;await ensureFont(c);canvas.width=W;canvas.height=H;const ctx=canvas.getContext("2d");ctx.clearRect(0,0,W,H);ctx.save();rounded(ctx,0,0,W,H,R);ctx.clip();drawCover(ctx,img,c);ctx.restore();drawFrame(ctx,c.element,false);await drawLogo(ctx,c,false);drawName(ctx,c);return true}
