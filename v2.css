@@ -21,3 +21,8 @@
 .template-extra small{font-size:12px;color:var(--muted)}
 .template-extra #clearSignatureBtn{align-self:flex-start}
 .font-field select{font-size:13px}
+
+.control-subhead{font-size:12px;margin:14px 0 4px;color:#525b67;letter-spacing:.02em}
+.defaults-note{font-size:12px;line-height:1.55;color:var(--muted);margin:0 0 10px}
+.template-extra .grid2{margin:0}
+#trumpRankInput{text-transform:uppercase}
