@@ -7,9 +7,9 @@
 <meta name="description" content="브라우저에서 만드는 포토카드 메이커">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Bebas+Neue&family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@400;600&family=DM+Serif+Display&family=Dancing+Script:wght@400;600&family=Great+Vibes&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;600&family=Montserrat:wght@400;600&family=Oswald:wght@400;600&family=Pacifico&family=Playfair+Display:wght@400;600&family=Poppins:wght@400;600&family=Quicksand:wght@400;600&family=Raleway:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Allura&family=Bebas+Neue&family=Bodoni+Moda:wght@400;600&family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@400;600&family=DM+Serif+Display&family=Dancing+Script:wght@400;600&family=Great+Vibes&family=Inter:wght@400;600&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;600&family=Montserrat:wght@400;600&family=Oswald:wght@400;600&family=Pacifico&family=Playfair+Display:wght@400;600&family=Poppins:wght@400;600&family=Quicksand:wght@400;600&family=Raleway:wght@400;600&family=Sacramento&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles.css?v=1">
-<link rel="stylesheet" href="./v2.css?v=3">
+<link rel="stylesheet" href="./v2.css?v=4">
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
@@ -32,7 +32,7 @@
         </div>
 
         <div class="grid2">
-          <div class="field"><label>템플릿</label><select id="templateSelect"><option value="리본">리본</option></select></div>
+          <div class="field"><label for="templateSelect">템플릿</label><select id="templateSelect"></select></div>
           <div class="field"><label>출력 크기</label><input type="text" value="650 × 1004" readonly></div>
           <div class="field full-span"><label for="nameInput">이름</label><input id="nameInput" type="text" value="WONYOUNG"></div>
           <div class="field"><label for="groupSelect">그룹</label><select id="groupSelect"></select></div>
@@ -40,6 +40,20 @@
           <div class="field"><label>요소 컬러</label><div class="color-row"><select id="elementColorSelect"></select><input id="elementColorPicker" type="color" value="#E7C68E"></div></div>
           <div class="field"><label>텍스트 컬러</label><div class="color-row"><select id="textColorSelect"></select><input id="textColorPicker" type="color" value="#F5E5C2"></div></div>
           <div class="field full-span"><button id="openColorManagerBtn" class="secondary wide" type="button">+ 사용자 색상 추가 / 관리</button></div>
+        </div>
+
+        <div id="templateExtraFields" class="template-extra-fields">
+          <div id="schoolNameField" class="field template-extra" hidden>
+            <label for="schoolNameInput">학교명</label>
+            <input id="schoolNameInput" type="text" value="아이브고등학교" placeholder="예: 아이브고등학교">
+            <small>Student ID 템플릿에서 그룹 로고 옆에 표시됩니다.</small>
+          </div>
+          <div id="signatureImageField" class="field template-extra" hidden>
+            <label for="signatureInput">사인 이미지</label>
+            <input id="signatureInput" type="file" accept="image/png,image/jpeg,image/webp">
+            <small>Signature 템플릿에서만 사용됩니다. 투명 배경 PNG를 권장합니다.</small>
+            <button id="clearSignatureBtn" class="ghost" type="button">사인 이미지 제거</button>
+          </div>
         </div>
 
         <details open>
@@ -57,24 +71,7 @@
           <div class="details-body">
             <div class="field font-field">
               <label for="fontSelect">이름 폰트</label>
-              <select id="fontSelect">
-                <option value="Playfair Display">Playfair Display</option>
-                <option value="Cormorant Garamond">Cormorant Garamond</option>
-                <option value="DM Serif Display">DM Serif Display</option>
-                <option value="Montserrat">Montserrat</option>
-                <option value="Great Vibes">Great Vibes</option>
-                <option value="Bebas Neue">Bebas Neue</option>
-                <option value="Libre Baskerville">Libre Baskerville</option>
-                <option value="Lora">Lora</option>
-                <option value="Abril Fatface">Abril Fatface</option>
-                <option value="Cinzel">Cinzel</option>
-                <option value="Poppins">Poppins</option>
-                <option value="Raleway">Raleway</option>
-                <option value="Pacifico">Pacifico</option>
-                <option value="Dancing Script">Dancing Script</option>
-                <option value="Oswald">Oswald</option>
-                <option value="Quicksand">Quicksand</option>
-              </select>
+              <select id="fontSelect"></select>
             </div>
             <div class="mini-grid">
               <label>자간<input id="trackingInput" type="number" min="0" max="14" value="4"></label>
