@@ -35,7 +35,7 @@ export const FONT_MAP=Object.fromEntries(FONT_REGISTRY.map(x=>[x.name,x.family])
 const common=(over={})=>({
   font:"Playfair Display",fontSize:31,tracking:4,textX:325,textY:903,background:"auto",
   backStyle:"center",frontLogoScale:100,frontLogoX:325,frontLogoY:60,
-  backLogoScale:100,backLogoX:325,backLogoY:502,logoOutline:true,logoShadow:true,
+  backLogoScale:100,backLogoX:325,backLogoY:502,logoWhiteOutline:true,logoOutline:true,logoShadow:true,
   ...over
 });
 
@@ -1072,6 +1072,38 @@ function wrappedCandy(ctx,x,y,s,color,angle=0){
   ctx.fillStyle="#FFF8FB";ctx.beginPath();ctx.roundRect(-s*.72,-s*.46,s*1.44,s*.92,s*.34);ctx.fill();ctx.stroke();
   ctx.fillStyle=rgba(color,.78);for(let xx=-s*.44;xx<=s*.44;xx+=s*.30)ctx.fillRect(xx,-s*.43,s*.12,s*.86);ctx.restore()
 }
+function jellyBean(ctx,x,y,s,color,angle=0){
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.shadowColor="rgba(0,0,0,.16)";ctx.shadowBlur=s*.12;
+  ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(0,0,s*.62,s*.34,.08,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle="rgba(255,255,255,.42)";ctx.beginPath();ctx.ellipse(-s*.18,-s*.10,s*.16,s*.07,-.18,0,Math.PI*2);ctx.fill();ctx.restore()
+}
+function peppermintCandy(ctx,x,y,s,color1="#FF4F63",color2="#FFFFFF",angle=0){
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.shadowColor="rgba(0,0,0,.16)";ctx.shadowBlur=s*.14;
+  ctx.fillStyle=color2;ctx.beginPath();ctx.arc(0,0,s*.48,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle=color1;
+  for(let i=0;i<6;i++){ctx.save();ctx.rotate(i*Math.PI/3);ctx.beginPath();ctx.moveTo(0,0);ctx.bezierCurveTo(s*.08,-s*.10,s*.20,-s*.35,s*.06,-s*.47);ctx.arc(0,0,s*.48,-Math.PI/2,-Math.PI/6);ctx.closePath();ctx.fill();ctx.restore()}
+  ctx.restore()
+}
+function candyFrameDense(ctx,W,H,c){
+  const palette=[c.element,"#FF4F72","#FFAA2E","#28C96B","#38A8FF","#8D62E8","#F44336","#FFE33D","#29D3C3"];
+  const topY=[34,62,88],bottomY=[H-34,H-62,H-88];
+  let k=0;
+  for(const y of topY)for(let x=24;x<W-16;x+=31){jellyBean(ctx,x+(k%2?6:-4),y,28+(k%3)*3,palette[k%palette.length],((k%5)-2)*.22);k++}
+  for(const y of bottomY)for(let x=18;x<W-14;x+=30){jellyBean(ctx,x+(k%2?5:-3),y,27+(k%4)*2,palette[k%palette.length],((k%6)-3)*.18);k++}
+  for(let y=116;y<H-112;y+=31){
+    jellyBean(ctx,34+(k%2?8:0),y,29+(k%3)*2,palette[k%palette.length],1.1+((k%4)-2)*.18);k++;
+    jellyBean(ctx,67-(k%2?4:0),y+9,26+(k%4)*2,palette[k%palette.length],1.18+((k%5)-2)*.15);k++;
+    jellyBean(ctx,W-34-(k%2?8:0),y,29+(k%3)*2,palette[k%palette.length],-1.1+((k%4)-2)*.18);k++;
+    jellyBean(ctx,W-67+(k%2?4:0),y+9,26+(k%4)*2,palette[k%palette.length],-1.18+((k%5)-2)*.15);k++
+  }
+  for(const [x,y,s,col,a] of [
+    [120,53,34,"#FF4F63",.12],[W-126,56,31,"#E73448",-.14],[92,H-56,31,"#F23858",-.12],[W-104,H-53,35,"#FF4F63",.14],
+    [50,260,29,"#F23858",.10],[W-48,390,28,"#E73448",-.10],[50,H-290,30,"#FF4F63",.08],[W-50,H-205,28,"#F23858",-.08]
+  ])peppermintCandy(ctx,x,y,s,col,"#FFFFFF",a);
+  wrappedCandy(ctx,180,73,23,"#F04D62",-.12);wrappedCandy(ctx,W-190,H-73,24,"#2FCB77",.12);
+  candyLollipop(ctx,88,136,40,"#FF4F9A","#FFFFFF",-.25);candyLollipop(ctx,W-88,H-150,39,"#4F9CFF","#FFFFFF",.24)
+}
+
 function teddyFace(ctx,x,y,s,brown="#A36F49",cream="#F4DEC5",angle=0){
   ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.shadowColor="rgba(0,0,0,.16)";ctx.shadowBlur=s*.12;
   ctx.fillStyle=brown;for(const dx of [-.36,.36]){ctx.beginPath();ctx.arc(s*dx,-s*.30,s*.25,0,Math.PI*2);ctx.fill()}
@@ -1096,6 +1128,17 @@ function japaneseFan(ctx,x,y,r,color,gold="#D9B76E",angle=0){
   ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.fillStyle=rgba(color,.84);ctx.strokeStyle=rgba(gold,.92);ctx.lineWidth=2;
   ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,-Math.PI*.84,-Math.PI*.16);ctx.closePath();ctx.fill();ctx.stroke();
   for(let i=0;i<=8;i++){const a=-Math.PI*.84+i*(Math.PI*.68/8);line(ctx,0,0,Math.cos(a)*r,Math.sin(a)*r,rgba(gold,.72),1)}
+  ctx.restore()
+}
+function kitsuneMask(ctx,x,y,s,angle=0){
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.shadowColor="rgba(0,0,0,.22)";ctx.shadowBlur=s*.13;ctx.shadowOffsetY=s*.05;
+  ctx.fillStyle="#FFFDF8";ctx.strokeStyle="#D9B76E";ctx.lineWidth=Math.max(1.4,s*.018);ctx.lineJoin="round";
+  ctx.beginPath();ctx.moveTo(-s*.42,-s*.18);ctx.lineTo(-s*.56,-s*.58);ctx.lineTo(-s*.20,-s*.42);ctx.quadraticCurveTo(0,-s*.55,s*.20,-s*.42);ctx.lineTo(s*.56,-s*.58);ctx.lineTo(s*.42,-s*.18);ctx.quadraticCurveTo(s*.34,s*.34,0,s*.55);ctx.quadraticCurveTo(-s*.34,s*.34,-s*.42,-s*.18);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  ctx.strokeStyle="#C83E4D";ctx.lineWidth=Math.max(2,s*.035);ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(-s*.28,-s*.16);ctx.quadraticCurveTo(-s*.18,-s*.25,-s*.08,-s*.14);ctx.moveTo(s*.28,-s*.16);ctx.quadraticCurveTo(s*.18,-s*.25,s*.08,-s*.14);ctx.stroke();
+  ctx.fillStyle="#2C2422";for(const dx of [-.18,.18]){ctx.beginPath();ctx.ellipse(s*dx,-s*.08,s*.055,s*.025,dx<0?-.25:.25,0,Math.PI*2);ctx.fill()}
+  ctx.fillStyle="#C83E4D";ctx.beginPath();ctx.moveTo(0,s*.12);ctx.lineTo(-s*.05,s*.20);ctx.lineTo(s*.05,s*.20);ctx.closePath();ctx.fill();
+  ctx.strokeStyle="#C83E4D";ctx.lineWidth=Math.max(1.5,s*.02);ctx.beginPath();ctx.moveTo(-s*.33,s*.08);ctx.lineTo(-s*.48,s*.18);ctx.moveTo(-s*.32,s*.17);ctx.lineTo(-s*.46,s*.30);ctx.moveTo(s*.33,s*.08);ctx.lineTo(s*.48,s*.18);ctx.moveTo(s*.32,s*.17);ctx.lineTo(s*.46,s*.30);ctx.stroke();
   ctx.restore()
 }
 function fireworkBurst(ctx,x,y,r,color,alpha=.9){
@@ -1123,24 +1166,22 @@ function retroGrid(ctx,W,H,y,color){
 
 async function frontCandyPop(e){
   const {ctx,W,H,c}=e;e.photoRect(0,0,W,H,e.R);
-  ctx.save();const g=ctx.createLinearGradient(0,H*.55,0,H);g.addColorStop(0,"rgba(255,255,255,0)");g.addColorStop(1,"rgba(255,224,240,.76)");ctx.fillStyle=g;ctx.fillRect(0,H*.50,W,H*.50);ctx.restore();
-  strokeRound(ctx,18,18,W-36,H-36,30,"rgba(255,255,255,.84)",5);strokeRound(ctx,29,29,W-58,H-58,24,rgba(c.element,.65),2);
-  candyLollipop(ctx,76,158,43,c.element,"#FFFFFF",-.22);candyLollipop(ctx,W-82,222,36,"#FF78B7",c.element,.24);
-  wrappedCandy(ctx,92,H-225,32,c.element,.20);wrappedCandy(ctx,W-90,H-192,28,"#8EDDE1",-.22);
-  for(const [x,y,s] of [[152,112,13],[520,122,10],[122,475,9],[552,585,12],[165,760,10]])star(ctx,x,y,s,s*.42,"rgba(255,255,255,.90)",.2,5);
-  ctx.save();ctx.fillStyle="rgba(255,255,255,.82)";ctx.shadowColor=rgba(c.element,.26);ctx.shadowBlur=14;ctx.beginPath();ctx.roundRect(104,H-164,W-208,104,46);ctx.fill();ctx.restore();
-  await e.logo({w:66,effects:true});e.name({x:c.textX,y:c.textY,maxWidth:410,size:c.fontSize,font:c.font,fill:c.text,stroke:"#FFFFFF",shadow:true})
+  // Dense candy border: the centre stays clear for the portrait while all four edges are packed with sweets.
+  candyFrameDense(ctx,W,H,c);
+  strokeRound(ctx,94,106,W-188,H-212,22,"rgba(255,255,255,.92)",5);
+  strokeRound(ctx,99,111,W-198,H-222,18,rgba(c.element,.44),1.5);
+  ctx.save();ctx.fillStyle="rgba(255,255,255,.88)";ctx.shadowColor="rgba(0,0,0,.18)";ctx.shadowBlur=10;ctx.beginPath();ctx.roundRect(126,H-151,W-252,76,34);ctx.fill();ctx.restore();
+  await e.logo({w:62,effects:true});e.name({x:c.textX,y:c.textY,maxWidth:350,size:c.fontSize,font:c.font,fill:c.text,stroke:"#FFFFFF",shadow:true})
 }
 async function backCandyPop(e){
-  const {ctx,W,H,c}=e;e.backBase("#FFEAF4");
-  for(let y=100,row=0;y<H;y+=155,row++)for(let x=82;x<W;x+=165){const xx=x+(row%2?82:0);wrappedCandy(ctx,xx,y,22,row%2?c.element:"#FF88B8",(row%3-.5)*.25)}
-  candyLollipop(ctx,90,145,34,c.element,"#FFFFFF",-.25);candyLollipop(ctx,W-88,H-145,34,"#8EDDE1",c.element,.25);
-  strokeRound(ctx,22,22,W-44,H-44,30,"rgba(255,255,255,.82)",3);await e.backLogo({maxWidth:225})
+  const {ctx,W,H,c}=e;e.backBase("#FFF8FB");candyFrameDense(ctx,W,H,c);
+  e.fillRound(104,116,W-208,H-232,24,"rgba(255,255,255,.93)");
+  strokeRound(ctx,104,116,W-208,H-232,24,rgba(c.element,.32),2);
+  await e.backLogo({maxWidth:220})
 }
 
 async function frontTeddyBear(e){
   const {ctx,W,H,c}=e;e.photoRect(0,0,W,H,e.R);
-  ctx.save();const g=ctx.createLinearGradient(0,H*.50,0,H);g.addColorStop(0,"rgba(246,225,203,0)");g.addColorStop(1,"rgba(235,207,179,.78)");ctx.fillStyle=g;ctx.fillRect(0,H*.46,W,H*.54);ctx.restore();
   strokeRound(ctx,18,18,W-36,H-36,30,"rgba(255,249,240,.90)",7);strokeRound(ctx,31,31,W-62,H-62,24,"rgba(151,105,72,.62)",2);
   ctx.save();ctx.setLineDash([8,8]);ctx.strokeStyle="rgba(112,76,54,.48)";ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(42,42,W-84,H-84,20);ctx.stroke();ctx.restore();
   teddyFace(ctx,92,160,76,"#9D6B48","#F0D4B8",-.12);teddyFace(ctx,W-86,H-214,66,"#B47C52","#F6DEC4",.12);
@@ -1172,12 +1213,13 @@ async function backRisingStar(e){
 
 async function frontJapanTraditional(e){
   const {ctx,W,H,c}=e;e.photoRect(0,0,W,H,e.R);
-  ctx.save();ctx.fillStyle="rgba(249,239,221,.14)";ctx.fillRect(0,0,W,H);ctx.restore();
-  ctx.save();const g=ctx.createLinearGradient(0,H*.56,0,H);g.addColorStop(0,"rgba(248,238,218,0)");g.addColorStop(1,"rgba(247,233,210,.88)");ctx.fillStyle=g;ctx.fillRect(0,H*.50,W,H*.50);ctx.restore();
-  seigaiha(ctx,W,220,"#B34E5D",.20,74);japaneseFan(ctx,92,186,92,c.element,"#D9B76E",-.24);japaneseFan(ctx,W-80,H-198,78,"#B34E5D","#D9B76E",.22);
-  for(const [x,y,s] of [[130,382,22],[530,350,18],[106,660,16],[548,730,24]]){ctx.save();ctx.fillStyle=rgba("#D86B78",.72);for(let i=0;i<5;i++){ctx.save();ctx.translate(x,y);ctx.rotate(i*Math.PI*2/5);ctx.beginPath();ctx.ellipse(0,-s*.42,s*.18,s*.40,0,0,Math.PI*2);ctx.fill();ctx.restore()}ctx.restore()}
+  // Keep the portrait clean: no full-width seigaiha overlay and no bottom colour gradient.
+  japaneseFan(ctx,86,180,88,c.element,"#D9B76E",-.24);
+  japaneseFan(ctx,W-80,H-198,78,"#B34E5D","#D9B76E",.22);
+  kitsuneMask(ctx,W-104,178,118,.10);
+  for(const [x,y,s] of [[116,370,20],[535,352,17],[102,657,15],[548,730,22]]){ctx.save();ctx.fillStyle=rgba("#D86B78",.72);for(let i=0;i<5;i++){ctx.save();ctx.translate(x,y);ctx.rotate(i*Math.PI*2/5);ctx.beginPath();ctx.ellipse(0,-s*.42,s*.18,s*.40,0,0,Math.PI*2);ctx.fill();ctx.restore()}ctx.restore()}
   strokeRound(ctx,18,18,W-36,H-36,30,"rgba(218,183,110,.86)",4);
-  ctx.save();ctx.fillStyle="rgba(252,245,232,.90)";ctx.beginPath();ctx.roundRect(112,H-158,W-224,96,8);ctx.fill();ctx.strokeStyle="rgba(184,139,73,.70)";ctx.lineWidth=1.5;ctx.stroke();ctx.restore();
+  ctx.save();ctx.fillStyle="rgba(252,245,232,.92)";ctx.beginPath();ctx.roundRect(112,H-158,W-224,96,8);ctx.fill();ctx.strokeStyle="rgba(184,139,73,.70)";ctx.lineWidth=1.5;ctx.stroke();ctx.restore();
   await e.logo({w:64,effects:true});e.name({x:c.textX,y:c.textY,maxWidth:395,size:c.fontSize,font:c.font,fill:"#6C2D38",stroke:"#FFF8EC",shadow:false})
 }
 async function backJapanTraditional(e){
