@@ -7,6 +7,7 @@ const TEMPLATE_FAVORITES_KEY="photocard-maker-template-favorites-v1";
 const TEMPLATE_RECENTS_KEY="photocard-maker-template-recents-v1";
 const TEMPLATE_PRESETS_KEY="photocard-maker-template-presets-v1";
 const WORKSPACE_SPLIT_KEY="photocard-maker-workspace-split-v1";
+const EXPORT_KEY="photocard-maker-export-v1";
 const GROUP_KEY="photocard-maker-v2-custom-groups";
 const COLOR_KEY="photocard-maker-v2-custom-colors";
 const PROGRESS_KEY="photocard-maker-v2-excel-progress";
@@ -46,10 +47,27 @@ function saveJson(k,v){localStorage.setItem(k,JSON.stringify(v))}
 function allColors(){return {...BASE_COLORS,...customColors}}
 function isHex(v){return /^#[0-9a-f]{6}$/i.test(String(v||"").trim())}
 function colorValue(v,f="#fff"){const s=String(v||"").trim();return isHex(s)?s.toUpperCase():(allColors()[s]||f)}
-function sanitize(name,f="card.png"){let s=(name||"").trim()||f;s=s.replace(/[<>:"/\\|?*\x00-\x1F]/g,"_").replace(/[ .]+$/g,"");if(!s.toLowerCase().endsWith(".png"))s+=".png";return s}
+function sanitize(name,f="card.png"){let s=(name||"").trim()||f;s=s.replace(/[<>:"/\\|?*\x00-\x1F]/g,"_").replace(/[ .]+$/g,"");if(!/\.(?:png|zip)$/i.test(s))s+=".png";return s}
 function backName(n){return sanitize(n).replace(/\.png$/i,"_BACK.png")}
-function defaultName(){const tid=($("templateSelect")?.value||"ribbon").toUpperCase();return sanitize((($("nameInput").value||"card").trim()||"card")+"_"+tid+"_650x1004.png")}
+function guideName(n){return sanitize(n).replace(/\.png$/i,"_GUIDE.png")}
+function exportScale(){return clamp(+$("exportScaleSelect")?.value||1,1,3)}
+function exportDims(scale=exportScale()){const s=clamp(+scale||1,1,3);return{scale:s,width:W*s,height:H*s,label:`${W*s}x${H*s}`}}
+function defaultName(){const tid=($("templateSelect")?.value||"ribbon").toUpperCase(),d=exportDims();return sanitize((($("nameInput").value||"card").trim()||"card")+"_"+tid+"_"+d.label+".png")}
 function maybeName(force=false){if(force||!filenameEdited)$("filenameInput").value=defaultName()}
+function updateExportSummary(){
+  const d=exportDims(),guide=$("exportGuideCheck")?.checked;
+  if($("exportSummary"))$("exportSummary").textContent=`PNG ${d.width} × ${d.height} · ${d.scale}× 재렌더링${guide?" · GUIDE PNG 추가":""}`
+}
+function saveExportSettings(){saveJson(EXPORT_KEY,{scale:exportScale(),guide:!!$("exportGuideCheck")?.checked})}
+function initExportSettings(){
+  const saved=loadJson(EXPORT_KEY,{scale:1,guide:false});
+  if($("exportScaleSelect"))$("exportScaleSelect").value=String(clamp(+saved.scale||1,1,3));
+  if($("exportGuideCheck"))$("exportGuideCheck").checked=!!saved.guide;
+  updateExportSummary()
+}
+function onExportSettingsChange(){
+  saveExportSettings();updateExportSummary();maybeName()
+}
 function status(msg,err=false,ok=false){const e=$("status");e.textContent=msg;e.className="status"+(err?" error":ok?" ok":"")}
 function batchStatus(msg,err=false,ok=false){const e=$("batchStatus");e.textContent=msg;e.className="status compact-status"+(err?" error":ok?" ok":"")}
 
@@ -509,8 +527,19 @@ function makeTemplateEnv(ctx,c,img){
   }
 }
 async function ensureFont(c){const family=c.font||"Playfair Display";try{await document.fonts.load(`400 ${Math.max(24,c.fontSize||31)}px "${family}"`)}catch{}}
-async function renderFront(canvas,img=photo,c=ctrl()){if(!img)return false;await ensureFont(c);canvas.width=W;canvas.height=H;const ctx=canvas.getContext("2d");ctx.clearRect(0,0,W,H);if(c.background&&c.background!=="auto")fillRound(ctx,0,0,W,H,R,c.background);await renderTemplateFront(c.template||"ribbon",makeTemplateEnv(ctx,c,img));return true}
-async function renderBack(canvas,c=ctrl()){canvas.width=W;canvas.height=H;const ctx=canvas.getContext("2d");ctx.clearRect(0,0,W,H);if(c.background&&c.background!=="auto")fillRound(ctx,0,0,W,H,R,c.background);await renderTemplateBack(c.template||"ribbon",makeTemplateEnv(ctx,c,null));return true}
+async function renderFront(canvas,img=photo,c=ctrl(),scale=1){
+  if(!img)return false;await ensureFont(c);
+  const s=clamp(+scale||1,1,3);canvas.width=W*s;canvas.height=H*s;
+  const ctx=canvas.getContext("2d");ctx.setTransform(s,0,0,s,0,0);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";ctx.clearRect(0,0,W,H);
+  if(c.background&&c.background!=="auto")fillRound(ctx,0,0,W,H,R,c.background);
+  await renderTemplateFront(c.template||"ribbon",makeTemplateEnv(ctx,c,img));return true
+}
+async function renderBack(canvas,c=ctrl(),scale=1){
+  const s=clamp(+scale||1,1,3);canvas.width=W*s;canvas.height=H*s;
+  const ctx=canvas.getContext("2d");ctx.setTransform(s,0,0,s,0,0);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";ctx.clearRect(0,0,W,H);
+  if(c.background&&c.background!=="auto")fillRound(ctx,0,0,W,H,R,c.background);
+  await renderTemplateBack(c.template||"ribbon",makeTemplateEnv(ctx,c,null));return true
+}
 function queue(){if(raf)return;raf=requestAnimationFrame(async()=>{raf=0;if(currentSide==="front"&&!photo)return;await (currentSide==="front"?renderFront($("previewCanvas")):renderBack($("previewCanvas")))})}
 function setLinked(p,v){$(p+"Range").value=v;$(p+"Number").value=v}
 function bindRange(p,min,max){const r=$(p+"Range"),n=$(p+"Number"),sync=(a,b)=>{const v=clamp(+a.value||0,min,max);b.value=v;queue()};r.oninput=()=>sync(r,n);n.oninput=()=>sync(n,r)}
@@ -521,6 +550,20 @@ async function doCutout(){if(!workingPhotoBlob)return;const btn=$("cutoutBtn");b
 async function restoreOriginalPhoto(){if(!originalPhotoFile)return;try{await setWorkingPhoto(originalPhotoFile,originalPhotoFile.name+" (원본)");$("restorePhotoBtn").disabled=true;status("원본 사진으로 복원했습니다.",false,true)}catch(e){status("원본 복원 실패: "+e.message,true)}}
 function switchSide(side){currentSide=side;$("frontTabBtn").classList.toggle("active",side==="front");$("backTabBtn").classList.toggle("active",side==="back");$("previewStage").classList.toggle("back-side",side==="back");$("previewHelp").innerHTML=side==="front"?"<b>드래그</b>: 위치 이동 · <b>마우스 휠</b>: 확대/축소":"뒷면은 그룹 로고와 프레임을 자동 배치합니다.";$("generateBtn").textContent=side==="front"?"앞면 저장":"뒷면 저장";if(side==="back"){$("previewStage").classList.add("has-image");$("previewHint").textContent="뒷면 미리보기"}else{$("previewHint").textContent=photoFile?.name||"이미지를 선택하세요";$("previewStage").classList.toggle("has-image",!!photo)}$("generateBtn").disabled=side==="front"?!photo:false;updateGuide();queue()}
 function bindGestures(){const s=$("previewStage");s.onpointerdown=e=>{if(currentSide!=="front"||!photo)return;s.setPointerCapture(e.pointerId);drag={x:e.clientX,y:e.clientY};s.classList.add("dragging")};s.onpointermove=e=>{if(!drag||currentSide!=="front")return;const r=s.getBoundingClientRect(),dx=e.clientX-drag.x,dy=e.clientY-drag.y;setLinked("focusX",clamp((+$("focusXNumber").value||50)-dx*100/r.width,0,100).toFixed(1));setLinked("focusY",clamp((+$("focusYNumber").value||50)-dy*100/r.height,0,100).toFixed(1));drag={x:e.clientX,y:e.clientY};queue()};const end=()=>{drag=null;s.classList.remove("dragging")};s.onpointerup=end;s.onpointercancel=end;s.onwheel=e=>{if(currentSide!=="front"||!photo)return;e.preventDefault();setLinked("zoom",clamp((+$("zoomNumber").value||100)+(e.deltaY<0?3:-3),100,500));queue()}}
+function makePrintGuideCanvas(source){
+  const c=document.createElement("canvas");c.width=source.width;c.height=source.height;const x=c.getContext("2d");x.drawImage(source,0,0);
+  const sx=c.width/W,sy=c.height/H,s=Math.min(sx,sy),safeX=c.width*(3/55),safeY=c.height*(3/85),edge=Math.max(2,2*s);
+  x.save();
+  x.lineWidth=Math.max(2,2*s);x.strokeStyle="rgba(235,43,70,.95)";x.setLineDash([]);x.strokeRect(edge/2,edge/2,c.width-edge,c.height-edge);
+  x.lineWidth=Math.max(2,1.5*s);x.strokeStyle="rgba(0,170,255,.95)";x.setLineDash([8*s,6*s]);x.strokeRect(safeX,safeY,c.width-safeX*2,c.height-safeY*2);
+  x.setLineDash([]);x.font=`700 ${Math.max(18,16*s)}px Arial,sans-serif`;x.textBaseline="top";
+  const pad=8*s,label1="TRIM · 55 × 85 mm",label2="SAFE · 약 3 mm";
+  const w=Math.max(x.measureText(label1).width,x.measureText(label2).width)+pad*2,h=42*s;
+  x.fillStyle="rgba(255,255,255,.88)";x.fillRect(pad,pad,w,h);
+  x.fillStyle="#D92346";x.fillText(label1,pad*2,pad*1.35);
+  x.fillStyle="#008FCB";x.fillText(label2,pad*2,pad*1.35+18*s);
+  x.restore();return c
+}
 function canvasBlob(c){return new Promise((res,rej)=>c.toBlob(b=>b?res(b):rej(new Error("PNG 생성 실패")),"image/png"))}
 function downloadBlob(b,n){const u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=n;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500)}
 
@@ -531,8 +574,30 @@ async function perm(h,ask=true){if(!h)return false;const o={mode:"readwrite"};if
 function pathText(){$("savePathStatus").textContent=saveDir?"저장 위치: "+saveDir.name:"저장 위치: 브라우저 기본 다운로드 폴더"}
 async function pickFolder(){if(!window.showDirectoryPicker)return status("이 브라우저는 저장 경로 지정을 지원하지 않습니다.",true);try{const h=await showDirectoryPicker({mode:"readwrite"});if(!await perm(h,true))return;saveDir=h;await storeHandle(h);pathText();status("저장 경로를 설정했습니다.",false,true)}catch(e){if(e.name!=="AbortError")status("저장 경로 설정 실패: "+e.message,true)}}
 async function saveBlob(b,n){n=sanitize(n);if(saveDir&&await perm(saveDir,true)){try{const fh=await saveDir.getFileHandle(n,{create:true}),w=await fh.createWritable();await w.write(b);await w.close();return}catch{}}downloadBlob(b,n)}
-async function saveCurrent(){if(currentSide==="front"&&!photo)return;const c=document.createElement("canvas"),base=sanitize($("filenameInput").value,defaultName());if(currentSide==="front")await renderFront(c);else await renderBack(c);await saveBlob(await canvasBlob(c),currentSide==="front"?base:backName(base));markDone();status((currentSide==="front"?"앞면":"뒷면")+" 저장 완료",false,true)}
-async function savePair(){if(!photo)return;try{const z=new JSZip(),base=sanitize($("filenameInput").value,defaultName()),f=document.createElement("canvas"),b=document.createElement("canvas");await renderFront(f);await renderBack(b);z.file(base,await canvasBlob(f));z.file(backName(base),await canvasBlob(b));await saveBlob(await z.generateAsync({type:"blob",compression:"DEFLATE"}),base.replace(/\.png$/i,"_FRONT_BACK.zip"));markDone();status("앞·뒷면 ZIP 저장 완료",false,true)}catch(e){status("앞·뒷면 저장 실패: "+e.message,true)}}
+async function saveCurrent(){
+  if(currentSide==="front"&&!photo)return;
+  try{
+    const scale=exportScale(),d=exportDims(scale),c=document.createElement("canvas"),base=sanitize($("filenameInput").value,defaultName()),name=currentSide==="front"?base:backName(base);
+    status(`${d.width} × ${d.height} 고해상도 렌더링 중…`);
+    if(currentSide==="front")await renderFront(c,photo,ctrl(),scale);else await renderBack(c,ctrl(),scale);
+    await saveBlob(await canvasBlob(c),name);
+    if($("exportGuideCheck").checked)await saveBlob(await canvasBlob(makePrintGuideCanvas(c)),guideName(name));
+    markDone();status(`${currentSide==="front"?"앞면":"뒷면"} 저장 완료 · ${d.width} × ${d.height}${$("exportGuideCheck").checked?" · GUIDE 포함":""}`,false,true)
+  }catch(e){status("저장 실패: "+e.message,true)}
+}
+async function savePair(){
+  if(!photo)return;
+  try{
+    const scale=exportScale(),d=exportDims(scale),z=new JSZip(),base=sanitize($("filenameInput").value,defaultName()),f=document.createElement("canvas"),b=document.createElement("canvas");
+    status(`앞·뒷면 ${d.width} × ${d.height} 렌더링 중…`);
+    await renderFront(f,photo,ctrl(),scale);await renderBack(b,ctrl(),scale);
+    z.file(base,await canvasBlob(f));z.file(backName(base),await canvasBlob(b));
+    if($("exportGuideCheck").checked){z.file(guideName(base),await canvasBlob(makePrintGuideCanvas(f)));z.file(guideName(backName(base)),await canvasBlob(makePrintGuideCanvas(b)))}
+    const zipName=base.replace(/\.png$/i,`_${d.label}_FRONT_BACK.zip`);
+    await saveBlob(await z.generateAsync({type:"blob",compression:"DEFLATE"}),zipName);
+    markDone();status(`앞·뒷면 ZIP 저장 완료 · ${d.width} × ${d.height}${$("exportGuideCheck").checked?" · GUIDE 2개 포함":""}`,false,true)
+  }catch(e){status("앞·뒷면 저장 실패: "+e.message,true)}
+}
 
 function ensureXlsx(){if(!window.XLSX)throw new Error("Excel 라이브러리가 로드되지 않았습니다.")}
 async function sampleExcel(){
@@ -693,7 +758,30 @@ function connectExcelImageFolder(files){
 }
 async function prepareBatch(){const ex=$("excelInput").files?.[0];batchFiles=[...($("imageFolderInput").files||[])];batchRows=[];$("batchBtn").disabled=true;if(!ex||!batchFiles.length)return batchStatus("Excel과 이미지 폴더를 모두 선택하세요.");try{batchRows=(await parseExcel(ex)).map(x=>({...x,state:"ready",message:""}));renderBatch();$("batchBtn").disabled=!batchRows.length;batchStatus(batchRows.length+"개 행을 읽었습니다.",false,true)}catch(e){batchStatus("Excel 읽기 실패: "+e.message,true)}}
 function renderBatch(){const body=batchRows.map(x=>`<tr class="${x.state}"><td>${x.excelRow}</td><td>${esc(x.row["그룹"])}</td><td>${esc(x.row["이름"])}</td><td>${esc(x.row["이미지명"])}</td><td>${esc(x.row["저장파일명"])}</td><td>${esc(x.message||x.state)}</td></tr>`).join("");$("batchTableWrap").innerHTML=`<table class="batch-table"><thead><tr><th>행</th><th>그룹</th><th>이름</th><th>이미지</th><th>저장파일명</th><th>상태</th></tr></thead><tbody>${body}</tbody></table>`}
-async function runBatch(){if(!batchRows.length)return;$("batchBtn").disabled=true;try{const zip=new JSZip();let ok=0,fail=0;for(const [i,item] of batchRows.entries()){const r=item.row;try{batchStatus(`${i+1}/${batchRows.length} 생성 중 · ${r["이름"]}`);const file=findBatchImage(r["이미지명"]);if(!file)throw new Error("이미지 없음");const bmp=await createImageBitmap(file,{imageOrientation:"from-image"}),baseCtrl=ctrl(),tid=templateIdFromValue(r["템플릿"]),td=templateDefaultState(tid),c={...baseCtrl,...td,template:tid,name:r["이름"]||baseCtrl.name,group:groupIdFromValue(r["그룹"],baseCtrl.group),element:colorValue(r["요소 컬러"],baseCtrl.element),text:colorValue(r["텍스트 컬러"],baseCtrl.text),background:backgroundColorValue(r["배경 컬러"],td.background??baseCtrl.background??"auto")},f=document.createElement("canvas"),b=document.createElement("canvas");await renderFront(f,bmp,c);await renderBack(b,c);bmp.close?.();const base=sanitize(r["저장파일명"],(r["이름"]||"card")+"_"+tid.toUpperCase()+"_650x1004.png");zip.file(base,await canvasBlob(f));zip.file(backName(base),await canvasBlob(b));item.state="done";item.message="앞·뒷면 완료";ok++}catch(e){item.state="error";item.message=e.message;fail++}renderBatch()}if(!ok)throw new Error("성공한 카드가 없습니다.");downloadBlob(await zip.generateAsync({type:"blob",compression:"DEFLATE"}),`포토카드_앞뒷면_${new Date().toISOString().slice(0,10)}.zip`);batchStatus(`완료: ${ok}개 성공${fail?` · ${fail}개 실패`:""}`,!!fail,!fail)}catch(e){batchStatus("일괄 생성 실패: "+e.message,true)}finally{$("batchBtn").disabled=false}}
+async function runBatch(){
+  if(!batchRows.length)return;$("batchBtn").disabled=true;
+  try{
+    const zip=new JSZip(),scale=exportScale(),d=exportDims(scale),includeGuide=$("exportGuideCheck").checked;let ok=0,fail=0;
+    for(const [i,item] of batchRows.entries()){
+      const r=item.row;
+      try{
+        batchStatus(`${i+1}/${batchRows.length} 생성 중 · ${r["이름"]} · ${d.width}×${d.height}`);
+        const file=findBatchImage(r["이미지명"]);if(!file)throw new Error("이미지 없음");
+        const bmp=await createImageBitmap(file,{imageOrientation:"from-image"}),baseCtrl=ctrl(),tid=templateIdFromValue(r["템플릿"]),td=templateDefaultState(tid),c={...baseCtrl,...td,template:tid,name:r["이름"]||baseCtrl.name,group:groupIdFromValue(r["그룹"],baseCtrl.group),element:colorValue(r["요소 컬러"],baseCtrl.element),text:colorValue(r["텍스트 컬러"],baseCtrl.text),background:backgroundColorValue(r["배경 컬러"],td.background??baseCtrl.background??"auto")},f=document.createElement("canvas"),b=document.createElement("canvas");
+        await renderFront(f,bmp,c,scale);await renderBack(b,c,scale);bmp.close?.();
+        const fallback=(r["이름"]||"card")+"_"+tid.toUpperCase()+"_"+d.label+".png",base=sanitize(r["저장파일명"],fallback);
+        zip.file(base,await canvasBlob(f));zip.file(backName(base),await canvasBlob(b));
+        if(includeGuide){zip.file(guideName(base),await canvasBlob(makePrintGuideCanvas(f)));zip.file(guideName(backName(base)),await canvasBlob(makePrintGuideCanvas(b)))}
+        item.state="done";item.message=`앞·뒷면 완료 · ${d.label}`;ok++
+      }catch(e){item.state="error";item.message=e.message;fail++}
+      renderBatch()
+    }
+    if(!ok)throw new Error("성공한 카드가 없습니다.");
+    downloadBlob(await zip.generateAsync({type:"blob",compression:"DEFLATE"}),`포토카드_${d.label}_앞뒷면_${new Date().toISOString().slice(0,10)}.zip`);
+    batchStatus(`완료: ${ok}개 성공 · ${d.width}×${d.height}${includeGuide?" · GUIDE 포함":""}${fail?` · ${fail}개 실패`:""}`,!!fail,!fail)
+  }catch(e){batchStatus("일괄 생성 실패: "+e.message,true)}
+  finally{$("batchBtn").disabled=false}
+}
 
 function filtered(){return excelRows.filter(x=>COLUMNS.every(c=>!filters[c]||String(x.row[c]??"")===filters[c]))}
 function optionsFor(c){return [...new Set(excelRows.map(x=>String(x.row[c]??"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ko-KR",{numeric:true}))}
@@ -808,7 +896,7 @@ function initWorkspaceResizer(){
   })
 }
 
-function bind(){bindRange("focusX",0,100);bindRange("focusY",0,100);bindRange("zoom",100,500);bindRange("frontLogoScale",40,200);bindRange("frontLogoX",0,650);bindRange("frontLogoY",0,1004);bindRange("backLogoScale",40,200);bindRange("backLogoX",0,650);bindRange("backLogoY",0,1004);bindRange("signatureScale",40,220);bindRange("signatureX",0,650);bindRange("signatureY",0,1004);bindGestures();$("photoInput").onchange=e=>choosePhoto(e.target.files?.[0]);$("cutoutBtn").onclick=doCutout;$("restorePhotoBtn").onclick=restoreOriginalPhoto;$("nameInput").oninput=()=>{maybeName();queue()};$("templateSelect").onchange=()=>{const id=$("templateSelect").value;recordTemplateRecent(id);applyTemplateDefaults(id,true)};$("openTemplateBrowserBtn").onclick=openTemplateBrowser;$("closeTemplateBrowserBtn").onclick=()=>$("templateBrowserDialog").close();$("templateSearchInput").oninput=renderTemplateBrowser;$("schoolNameInput").oninput=queue;$("trumpSuitSelect").onchange=()=>{syncTrumpPicker("suit");syncTrumpPicker("rank");queue()};$("trumpRankInput").oninput=queue;$("trumpSuitColorSelect").onchange=()=>{syncTrumpPicker("suit");queue()};$("trumpRankColorSelect").onchange=()=>{syncTrumpPicker("rank");queue()};$("trumpSuitColorPicker").oninput=()=>trumpPickerToSelect("suit");$("trumpRankColorPicker").oninput=()=>trumpPickerToSelect("rank");$("signatureInput").onchange=e=>chooseSignature(e.target.files?.[0]);$("clearSignatureBtn").onclick=clearSignature;$("groupSelect").onchange=()=>{templateThumbCache.clear();updateGroupPaletteButton();queue()};$("applyGroupPaletteBtn").onclick=()=>applyGroupPalette();$("openGroupManagerBtn").onclick=openGroupManager;$("closeGroupManagerBtn").onclick=()=>$("groupManagerDialog").close();$("groupLogoInput").onchange=e=>chooseGroupLogo(e.target.files?.[0]);$("groupBackgroundDefaultCheck").onchange=e=>$("groupBackgroundColor").disabled=e.target.checked;$("saveGroupBtn").onclick=saveGroup;$("resetGroupEditorBtn").onclick=resetGroupEditor;$("backStyleSelect").onchange=queue;$("fontSelect").onchange=queue;$("logoOutlineCheck").onchange=queue;$("logoShadowCheck").onchange=queue;$("elementColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("element");queue()};$("textColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("text");queue()};$("backgroundColorSelect").onchange=()=>{templateThumbCache.clear();syncBackgroundPicker();queue()};$("elementColorPicker").oninput=()=>pickerToSelect("element");$("textColorPicker").oninput=()=>pickerToSelect("text");$("backgroundColorPicker").oninput=backgroundPickerToSelect;["trackingInput","fontSizeInput","textXInput","textYInput","shadowCheck","strokeColorPicker","strokeWidthInput"].forEach(id=>$(id).oninput=queue);$("resetCropBtn").onclick=()=>{setLinked("focusX",50);setLinked("focusY",50);setLinked("zoom",100);queue()};$("resetTextBtn").onclick=()=>{Object.assign($("trackingInput"),{value:4});$("fontSizeInput").value=31;$("textXInput").value=325;$("textYInput").value=903;$("shadowCheck").checked=true;$("strokeColorPicker").value="#FFFFFF";$("strokeWidthInput").value=1;queue()};$("centerGuideCheck").oninput=updateGuide;$("frontTabBtn").onclick=()=>switchSide("front");$("backTabBtn").onclick=()=>switchSide("back");$("filenameInput").oninput=()=>filenameEdited=true;$("generateBtn").onclick=saveCurrent;$("savePairBtn").onclick=savePair;$("savePathBtn").onclick=pickFolder;$("presetSelect").onchange=onPresetSelectionChange;$("applyPresetBtn").onclick=applySelectedPreset;$("savePresetBtn").onclick=saveNewPreset;$("overwritePresetBtn").onclick=overwriteSelectedPreset;$("renamePresetBtn").onclick=renameSelectedPreset;$("deletePresetBtn").onclick=deleteSelectedPreset;$("presetNameInput").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveNewPreset()}};$("saveDefaultsBtn").onclick=saveCurrentTemplateDefaults;$("resetDefaultsBtn").onclick=resetCurrentTemplateDefaults;$("sampleExcelBtn").onclick=sampleExcel;$("excelTemplateDownloadBtn").onclick=sampleExcel;$("excelImageFolderBtn").onclick=()=>$("excelImageFolderInput").click();$("excelImageFolderInput").onchange=e=>connectExcelImageFolder(e.target.files);$("excelInput").onchange=prepareBatch;$("imageFolderInput").onchange=prepareBatch;$("batchBtn").onclick=runBatch;$("excelDataLoadBtn").onclick=()=>$("excelDataInput").click();$("excelDataInput").onchange=e=>loadExcelPanel(e.target.files?.[0]);$("excelProgressSaveBtn").onclick=saveProgress;$("openColorManagerBtn").onclick=openColorManager;$("addCustomColorBtn").onclick=saveCustomColor;$("customColorPicker").oninput=e=>$("customColorHex").value=e.target.value.toUpperCase();$("customColorHex").oninput=e=>{const v=normalizeHex(e.target.value);if(v)$("customColorPicker").value=v}}
+function bind(){bindRange("focusX",0,100);bindRange("focusY",0,100);bindRange("zoom",100,500);bindRange("frontLogoScale",40,200);bindRange("frontLogoX",0,650);bindRange("frontLogoY",0,1004);bindRange("backLogoScale",40,200);bindRange("backLogoX",0,650);bindRange("backLogoY",0,1004);bindRange("signatureScale",40,220);bindRange("signatureX",0,650);bindRange("signatureY",0,1004);bindGestures();$("photoInput").onchange=e=>choosePhoto(e.target.files?.[0]);$("cutoutBtn").onclick=doCutout;$("restorePhotoBtn").onclick=restoreOriginalPhoto;$("nameInput").oninput=()=>{maybeName();queue()};$("templateSelect").onchange=()=>{const id=$("templateSelect").value;recordTemplateRecent(id);applyTemplateDefaults(id,true)};$("openTemplateBrowserBtn").onclick=openTemplateBrowser;$("closeTemplateBrowserBtn").onclick=()=>$("templateBrowserDialog").close();$("templateSearchInput").oninput=renderTemplateBrowser;$("schoolNameInput").oninput=queue;$("trumpSuitSelect").onchange=()=>{syncTrumpPicker("suit");syncTrumpPicker("rank");queue()};$("trumpRankInput").oninput=queue;$("trumpSuitColorSelect").onchange=()=>{syncTrumpPicker("suit");queue()};$("trumpRankColorSelect").onchange=()=>{syncTrumpPicker("rank");queue()};$("trumpSuitColorPicker").oninput=()=>trumpPickerToSelect("suit");$("trumpRankColorPicker").oninput=()=>trumpPickerToSelect("rank");$("signatureInput").onchange=e=>chooseSignature(e.target.files?.[0]);$("clearSignatureBtn").onclick=clearSignature;$("groupSelect").onchange=()=>{templateThumbCache.clear();updateGroupPaletteButton();queue()};$("applyGroupPaletteBtn").onclick=()=>applyGroupPalette();$("openGroupManagerBtn").onclick=openGroupManager;$("closeGroupManagerBtn").onclick=()=>$("groupManagerDialog").close();$("groupLogoInput").onchange=e=>chooseGroupLogo(e.target.files?.[0]);$("groupBackgroundDefaultCheck").onchange=e=>$("groupBackgroundColor").disabled=e.target.checked;$("saveGroupBtn").onclick=saveGroup;$("resetGroupEditorBtn").onclick=resetGroupEditor;$("backStyleSelect").onchange=queue;$("fontSelect").onchange=queue;$("logoOutlineCheck").onchange=queue;$("logoShadowCheck").onchange=queue;$("elementColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("element");queue()};$("textColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("text");queue()};$("backgroundColorSelect").onchange=()=>{templateThumbCache.clear();syncBackgroundPicker();queue()};$("elementColorPicker").oninput=()=>pickerToSelect("element");$("textColorPicker").oninput=()=>pickerToSelect("text");$("backgroundColorPicker").oninput=backgroundPickerToSelect;["trackingInput","fontSizeInput","textXInput","textYInput","shadowCheck","strokeColorPicker","strokeWidthInput"].forEach(id=>$(id).oninput=queue);$("resetCropBtn").onclick=()=>{setLinked("focusX",50);setLinked("focusY",50);setLinked("zoom",100);queue()};$("resetTextBtn").onclick=()=>{Object.assign($("trackingInput"),{value:4});$("fontSizeInput").value=31;$("textXInput").value=325;$("textYInput").value=903;$("shadowCheck").checked=true;$("strokeColorPicker").value="#FFFFFF";$("strokeWidthInput").value=1;queue()};$("centerGuideCheck").oninput=updateGuide;$("frontTabBtn").onclick=()=>switchSide("front");$("backTabBtn").onclick=()=>switchSide("back");$("filenameInput").oninput=()=>filenameEdited=true;$("exportScaleSelect").onchange=onExportSettingsChange;$("exportGuideCheck").onchange=onExportSettingsChange;$("generateBtn").onclick=saveCurrent;$("savePairBtn").onclick=savePair;$("savePathBtn").onclick=pickFolder;$("presetSelect").onchange=onPresetSelectionChange;$("applyPresetBtn").onclick=applySelectedPreset;$("savePresetBtn").onclick=saveNewPreset;$("overwritePresetBtn").onclick=overwriteSelectedPreset;$("renamePresetBtn").onclick=renameSelectedPreset;$("deletePresetBtn").onclick=deleteSelectedPreset;$("presetNameInput").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveNewPreset()}};$("saveDefaultsBtn").onclick=saveCurrentTemplateDefaults;$("resetDefaultsBtn").onclick=resetCurrentTemplateDefaults;$("sampleExcelBtn").onclick=sampleExcel;$("excelTemplateDownloadBtn").onclick=sampleExcel;$("excelImageFolderBtn").onclick=()=>$("excelImageFolderInput").click();$("excelImageFolderInput").onchange=e=>connectExcelImageFolder(e.target.files);$("excelInput").onchange=prepareBatch;$("imageFolderInput").onchange=prepareBatch;$("batchBtn").onclick=runBatch;$("excelDataLoadBtn").onclick=()=>$("excelDataInput").click();$("excelDataInput").onchange=e=>loadExcelPanel(e.target.files?.[0]);$("excelProgressSaveBtn").onclick=saveProgress;$("openColorManagerBtn").onclick=openColorManager;$("addCustomColorBtn").onclick=saveCustomColor;$("customColorPicker").oninput=e=>$("customColorHex").value=e.target.value.toUpperCase();$("customColorHex").oninput=e=>{const v=normalizeHex(e.target.value);if(v)$("customColorPicker").value=v}}
 async function registerModelCacheWorker(){if(!("serviceWorker" in navigator))return;try{await navigator.serviceWorker.register("./service-worker.js",{scope:"./"});await navigator.serviceWorker.ready}catch(e){console.warn("모델 캐시 서비스 워커 등록 실패:",e)}}
-async function init(){registerModelCacheWorker();initWorkspaceResizer();initFonts();initTemplates();$("fontSelect").value="Playfair Display";$("logoOutlineCheck").checked=true;$("logoShadowCheck").checked=true;initColors();initGroups();updateTemplateExtras();bind();renderExcelHead();renderExcelBody();restoreProgress();const saved=loadJson(STORAGE_KEY,null);applyTemplateDefaults("ribbon",false);if(saved?.name)$("nameInput").value=saved.name;maybeName(true);saveDir=await loadHandle();pathText();switchSide("front");status("준비 완료. 사진을 선택하세요.",false,true);loadAsset(GROUPS.IVE.logo).catch(()=>{})}
+async function init(){registerModelCacheWorker();initWorkspaceResizer();initExportSettings();initFonts();initTemplates();$("fontSelect").value="Playfair Display";$("logoOutlineCheck").checked=true;$("logoShadowCheck").checked=true;initColors();initGroups();updateTemplateExtras();bind();renderExcelHead();renderExcelBody();restoreProgress();const saved=loadJson(STORAGE_KEY,null);applyTemplateDefaults("ribbon",false);if(saved?.name)$("nameInput").value=saved.name;maybeName(true);saveDir=await loadHandle();pathText();switchSide("front");status("준비 완료. 사진을 선택하세요.",false,true);loadAsset(GROUPS.IVE.logo).catch(()=>{})}
 init();
