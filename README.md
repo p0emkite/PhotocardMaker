@@ -114,3 +114,17 @@ npm test
 - 템플릿 좌표는 650×1004 논리 좌표를 유지하므로 기존 템플릿/프리셋 호환성 유지
 - 선택 시 별도 `_GUIDE.png` 파일에 55×85mm 외곽 재단선과 약 3mm 안전영역을 표시
 - 실제 완성 PNG에는 인쇄 가이드가 들어가지 않음
+
+
+## GitHub logo storage
+
+Custom group logos can optionally be committed directly to this repository from the deployed app.
+
+- Target repository: `p0emkite/PhotocardMaker`
+- Branch: `main`
+- Logo directory: `assets/logos/custom/`
+- Required fine-grained token permission: repository access only to PhotocardMaker, `Contents: Read and write`
+- The token is stored only in browser `sessionStorage`; it is not written to source code, local group data, or the repository
+- SVG logos are uploaded as sanitized SVG; bitmap logos are uploaded in their optimized WebP/PNG form
+- Group metadata and representative colors remain local browser data
+- If GitHub upload is enabled but no token is connected, group save is blocked rather than silently falling back to browser-only logo storage
