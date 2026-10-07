@@ -27,3 +27,19 @@ Branch를 **main / (root)** 로 설정하면 됩니다.
 배포 주소:
 
 `https://p0emkite.github.io/PhotocardMaker/`
+
+
+## 템플릿 엔진
+
+템플릿 메타데이터와 렌더러는 `templates.js`에서 관리합니다. 앱 본체는 템플릿 레지스트리를 읽어 템플릿/폰트 목록과 조건부 입력 필드를 구성합니다.
+
+현재 구조 검증용 템플릿:
+
+- 01. Ribbon Classic
+- 03. Polaroid
+- 05. Magazine Cover
+- 14. Minimal Line
+- 22. Student ID — 학교명 입력 지원
+- 39. Signature — 사용자 사인 이미지 업로드 지원
+
+새 템플릿은 `TEMPLATE_REGISTRY`에 메타데이터를 등록하고 front/back renderer를 연결하는 방식으로 확장합니다.
