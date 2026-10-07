@@ -308,8 +308,8 @@
         </div>
         <div class="field">
           <label for="groupLogoInput">그룹 로고</label>
-          <input id="groupLogoInput" type="file" accept="image/png,image/jpeg,image/webp">
-          <small>투명 배경 PNG/WebP 권장 · 저장 시 웹용 크기로 자동 최적화됩니다.</small>
+          <input id="groupLogoInput" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg">
+          <small>SVG / 투명 PNG / WebP 권장 · SVG는 벡터 그대로 저장하고, 비트맵 이미지는 웹용 크기로 자동 최적화합니다.</small>
         </div>
         <div class="group-logo-preview-wrap">
           <div id="groupLogoPreviewEmpty" class="group-logo-preview-empty">로고 미리보기</div>
@@ -379,6 +379,6 @@
 </dialog>
 
 <footer>렌더링은 사용자 브라우저 안에서 실행됩니다. 사진은 서버로 업로드하지 않습니다.</footer>
-<script type="module" src="./app-v2.js?v=23"></script>
+<script type="module" src="./app-v2.js?v=24"></script>
 </body>
 </html>
