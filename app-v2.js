@@ -10,6 +10,9 @@ const WORKSPACE_SPLIT_KEY="photocard-maker-workspace-split-v1";
 const WORK_SIZE_KEY="photocard-maker-work-size-v1";
 const LEGACY_EXPORT_KEY="photocard-maker-export-v1";
 const GROUP_KEY="photocard-maker-v2-custom-groups";
+const GITHUB_LOGO_PREF_KEY="photocard-maker-github-logo-pref-v1";
+const GITHUB_TOKEN_SESSION_KEY="photocard-maker-github-token-session-v1";
+const GITHUB_REPO_OWNER="p0emkite",GITHUB_REPO_NAME="PhotocardMaker",GITHUB_REPO=GITHUB_REPO_OWNER+"/"+GITHUB_REPO_NAME,GITHUB_BRANCH="main",GITHUB_LOGO_DIR="assets/logos/custom";
 const COLOR_KEY="photocard-maker-v2-custom-colors";
 const PROGRESS_KEY="photocard-maker-v2-excel-progress";
 const DB_NAME="photocard-maker-storage",DB_STORE="handles",DB_KEY="folder";
@@ -36,7 +39,7 @@ let cutoutModule=null;
 const CUTOUT_CONFIG={model:"isnet",output:{format:"image/png",quality:1}};
 function webGpuAvailable(){return typeof navigator!=="undefined"&&!!navigator.gpu}
 let batchRows=[],batchFiles=[],excelImageFiles=[],excelRows=[],selectedId=null,sortCol=null,sortDesc=false,filters=Object.fromEntries(COLUMNS.map(c=>[c,""]));
-let editColorName=null,editGroupId=null,pendingGroupLogo=null;
+let editColorName=null,editGroupId=null,pendingGroupLogo=null,pendingGroupLogoMeta=null,githubConnectedLogin=null;
 let templateBrowserFilter="all",templateThumbToken=0,templateThumbPlaceholder=null;
 const templateThumbCache=new Map();
 const assetCache=new Map();
@@ -98,6 +101,104 @@ function saveCustomColor(){const n=$("customColorName").value.trim(),v=normalize
 function editColor(n){if(!customColors[n])return;editColorName=n;$("customColorName").value=n;$("customColorHex").value=customColors[n];$("customColorPicker").value=customColors[n];$("addCustomColorBtn").textContent="수정 저장";$("customColorName").focus()}
 function deleteColor(n){const suitOld=$("trumpSuitColorSelect")?.value||"auto",rankOld=$("trumpRankColorSelect")?.value||"auto",bgOld=$("backgroundColorSelect")?.value||"auto";delete customColors[n];saveJson(COLOR_KEY,customColors);colorOptions("elementColorSelect");colorOptions("textColorSelect");backgroundColorOptions(bgOld);trumpColorOptions("trumpSuitColorSelect",suitOld);trumpColorOptions("trumpRankColorSelect",rankOld);syncPicker("element");syncPicker("text");syncBackgroundPicker();syncTrumpPicker("suit");syncTrumpPicker("rank");renderCustomColors();queue()}
 function initColors(){colorOptions("elementColorSelect","샴페인 골드");colorOptions("textColorSelect","아이보리 골드");backgroundColorOptions("auto");trumpColorOptions("trumpSuitColorSelect","auto");trumpColorOptions("trumpRankColorSelect","auto");syncPicker("element");syncPicker("text");syncBackgroundPicker();syncTrumpPicker("suit");syncTrumpPicker("rank");renderCustomColors()}
+
+function githubToken(){try{return sessionStorage.getItem(GITHUB_TOKEN_SESSION_KEY)||""}catch{return""}}
+function githubLogoUploadEnabled(){return !!$("githubLogoUploadCheck")?.checked}
+function githubSetStatus(message,type=""){
+  const e=$("githubLogoStorageStatus");if(!e)return;e.textContent=message;e.className=type==="ok"?"github-status-ok":type==="error"?"github-status-error":""
+}
+function saveGithubLogoPref(){saveJson(GITHUB_LOGO_PREF_KEY,{upload:githubLogoUploadEnabled()})}
+function initGithubLogoStorage(){
+  const pref=loadJson(GITHUB_LOGO_PREF_KEY,{upload:true});
+  if($("githubLogoUploadCheck"))$("githubLogoUploadCheck").checked=pref.upload!==false;
+  const token=githubToken();
+  if(token){githubSetStatus("이 탭에 저장된 토큰이 있습니다 · 연결 확인을 눌러 검증하세요.");$("githubDisconnectBtn").disabled=false}
+  else githubSetStatus("미연결 · GitHub 저장 옵션을 사용할 경우 연결이 필요합니다.")
+}
+async function githubApi(path,{method="GET",body=null,token=githubToken()}={}){
+  if(!token)throw new Error("GitHub 토큰이 없습니다.");
+  const res=await fetch("https://api.github.com"+path,{
+    method,
+    headers:{
+      "Accept":"application/vnd.github+json",
+      "Authorization":"Bearer "+token,
+      "X-GitHub-Api-Version":"2022-11-28",
+      ...(body?{"Content-Type":"application/json"}:{})
+    },
+    body:body?JSON.stringify(body):null
+  });
+  const text=await res.text();let data=null;try{data=text?JSON.parse(text):null}catch{}
+  if(!res.ok){
+    const message=data?.message||(`GitHub API 오류 (${res.status})`);
+    const err=new Error(message);err.status=res.status;throw err
+  }
+  return data
+}
+async function verifyGithubConnection(){
+  const input=$("githubTokenInput"),token=(input.value||githubToken()).trim();
+  if(!token){githubSetStatus("Fine-grained token을 입력하세요.","error");input.focus();return false}
+  const btn=$("githubConnectBtn");btn.disabled=true;
+  try{
+    const [user,repoInfo]=await Promise.all([
+      githubApi("/user",{token}),
+      githubApi(`/repos/${GITHUB_REPO}`,{token})
+    ]);
+    const canPush=repoInfo?.permissions?.push;
+    if(canPush===false)throw new Error("이 토큰에는 저장소 쓰기 권한이 없습니다. Contents: Read and write가 필요합니다.");
+    sessionStorage.setItem(GITHUB_TOKEN_SESSION_KEY,token);githubConnectedLogin=user.login||"GitHub";
+    input.value="";input.placeholder=`연결됨: ${githubConnectedLogin}`;
+    $("githubDisconnectBtn").disabled=false;
+    githubSetStatus(`${githubConnectedLogin} 연결됨 · 로고를 GitHub 저장소에 업로드할 수 있습니다.`,"ok");
+    return true
+  }catch(e){
+    githubConnectedLogin=null;githubSetStatus("연결 실패: "+e.message,"error");return false
+  }finally{btn.disabled=false}
+}
+function disconnectGithub(){
+  try{sessionStorage.removeItem(GITHUB_TOKEN_SESSION_KEY)}catch{}
+  githubConnectedLogin=null;$("githubTokenInput").value="";$("githubTokenInput").placeholder="Fine-grained token · Contents: Read and write";$("githubDisconnectBtn").disabled=true;
+  githubSetStatus("연결 해제됨 · GitHub 저장 옵션을 사용할 경우 다시 연결하세요.")
+}
+function dataUrlPayload(url){
+  const m=String(url||"").match(/^data:(image\/(?:svg\+xml|webp|png|jpeg));base64,(.+)$/s);
+  if(!m)throw new Error("업로드할 로고 데이터를 읽지 못했습니다.");
+  const ext=m[1]==="image/svg+xml"?"svg":m[1]==="image/jpeg"?"jpg":m[1].split("/")[1];
+  return{mime:m[1],ext,base64:m[2]}
+}
+function githubLogoSlug(name,id){
+  const slug=String(name||"").normalize("NFKD").replace(/[^a-zA-Z0-9_-]+/g,"-").replace(/^-+|-+$/g,"").toLowerCase();
+  return (slug||"group")+"-"+String(id||"logo").replace(/[^a-zA-Z0-9_-]+/g,"").slice(-8)
+}
+function githubContentPathUrl(path){return `/repos/${GITHUB_REPO}/contents/${path.split("/").map(encodeURIComponent).join("/")}`}
+async function githubExistingFile(path){
+  try{return await githubApi(githubContentPathUrl(path)+`?ref=${encodeURIComponent(GITHUB_BRANCH)}`)}
+  catch(e){if(e.status===404)return null;throw e}
+}
+async function uploadLogoToGithub({groupId,name,dataUrl,oldPath=""}){
+  if(!githubToken())throw new Error("GitHub 연결이 필요합니다.");
+  const payload=dataUrlPayload(dataUrl),filename=githubLogoSlug(name,groupId)+"."+payload.ext,path=GITHUB_LOGO_DIR+"/"+filename,existing=await githubExistingFile(path);
+  await githubApi(githubContentPathUrl(path),{method:"PUT",body:{
+    message:`Add/update ${name} group logo`,
+    content:payload.base64,
+    branch:GITHUB_BRANCH,
+    ...(existing?.sha?{sha:existing.sha}:{})
+  }});
+  if(oldPath&&oldPath!==path)await deleteLogoFromGithub(oldPath,true);
+  return{path,webPath:"./"+path}
+}
+async function deleteLogoFromGithub(path,silent=false){
+  if(!path||!githubToken())return false;
+  try{
+    const existing=await githubExistingFile(path);if(!existing?.sha)return false;
+    await githubApi(githubContentPathUrl(path),{method:"DELETE",body:{message:"Remove custom group logo",sha:existing.sha,branch:GITHUB_BRANCH}});
+    return true
+  }catch(e){if(!silent)throw e;console.warn("GitHub 로고 삭제 실패:",e);return false}
+}
+function primeLogoAsset(path,dataUrl){
+  if(!path||!dataUrl)return;
+  const p=new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error("로고 로드 실패"));i.src=dataUrl});
+  assetCache.set(path,p)
+}
 
 function initGroups(preferred="IVE"){
   const s=$("groupSelect"),old=preferred??s.value;
@@ -170,20 +271,20 @@ async function optimizeGroupLogo(file){
   const isSvg=file.type==="image/svg+xml"||/\.svg$/i.test(file.name||"");
   if(isSvg){
     const clean=sanitizeSvgText(await file.text());
-    return svgTextToDataUrl(clean)
+    const dataUrl=svgTextToDataUrl(clean);return{dataUrl,kind:"svg",originalName:file.name||"logo.svg"}
   }
   const bmp=await createImageBitmap(file,{imageOrientation:"from-image"}),max=900,scale=Math.min(1,max/Math.max(bmp.width,bmp.height)),w=Math.max(1,Math.round(bmp.width*scale)),h=Math.max(1,Math.round(bmp.height*scale));
   const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(bmp,0,0,w,h);bmp.close?.();
-  let url=c.toDataURL("image/webp",.92);if(!url.startsWith("data:image/webp"))url=c.toDataURL("image/png");
-  return url
+  let dataUrl=c.toDataURL("image/webp",.92);if(!dataUrl.startsWith("data:image/webp"))dataUrl=c.toDataURL("image/png");
+  return{dataUrl,kind:"bitmap",originalName:file.name||"logo"}
 }
 function resetGroupEditor(){
-  editGroupId=null;pendingGroupLogo=null;$("groupEditorTitle").textContent="새 그룹 추가";$("groupNameInput").disabled=false;$("groupNameInput").value="";
+  editGroupId=null;pendingGroupLogo=null;pendingGroupLogoMeta=null;$("groupEditorTitle").textContent="새 그룹 추가";$("groupNameInput").disabled=false;$("groupNameInput").value="";
   $("groupLogoInput").value="";$("groupElementColor").value="#E7C68E";$("groupTextColor").value="#F5E5C2";$("groupBackgroundColor").value="#FFFFFF";$("groupBackgroundDefaultCheck").checked=true;$("groupBackgroundColor").disabled=true;
   $("saveGroupBtn").textContent="그룹 저장";groupLogoPreview(null);renderGroupManagerList();groupStatus("새 그룹을 추가하거나 오른쪽 목록에서 수정할 그룹을 선택하세요.")
 }
 function editGroup(id){
-  const g=GROUPS[id];if(!g)return;editGroupId=id;pendingGroupLogo=null;$("groupEditorTitle").textContent=g.builtIn?g.label+" 기본 그룹 설정":g.label+" 수정";$("groupNameInput").value=g.label;
+  const g=GROUPS[id];if(!g)return;editGroupId=id;pendingGroupLogo=null;pendingGroupLogoMeta=null;$("groupEditorTitle").textContent=g.builtIn?g.label+" 기본 그룹 설정":g.label+" 수정";$("groupNameInput").value=g.label;
   $("groupNameInput").disabled=!!g.builtIn;$("groupLogoInput").value="";$("groupElementColor").value=colorValue(g.element,"#E7C68E");$("groupTextColor").value=colorValue(g.text,"#F5E5C2");
   const auto=!g.background||g.background==="auto";$("groupBackgroundDefaultCheck").checked=auto;$("groupBackgroundColor").disabled=auto;$("groupBackgroundColor").value=auto?"#FFFFFF":colorValue(g.background,"#FFFFFF");
   $("saveGroupBtn").textContent="변경 저장";groupLogoPreview(g.logo);renderGroupManagerList();groupStatus(g.builtIn?"기본 그룹은 이름과 삭제는 잠겨 있고 로고·대표 컬러는 수정할 수 있습니다.":"현재 그룹 정보를 수정하고 있습니다.")
@@ -208,27 +309,51 @@ async function chooseGroupLogo(file){
   try{
     const isSvg=file.type==="image/svg+xml"||/\.svg$/i.test(file.name||"");
     groupStatus(isSvg?"SVG 로고를 읽고 안전하게 정리하고 있습니다…":"로고를 최적화하고 있습니다…");
-    pendingGroupLogo=await optimizeGroupLogo(file);
+    pendingGroupLogoMeta=await optimizeGroupLogo(file);pendingGroupLogo=pendingGroupLogoMeta.dataUrl;
     groupLogoPreview(pendingGroupLogo);
-    groupStatus(isSvg?"SVG 벡터 로고 준비 완료 · 원본 선명도를 유지합니다.":"비트맵 로고 준비 완료 · 웹용으로 최적화했습니다.","ok")
-  }catch(e){groupStatus("로고 불러오기 실패: "+e.message,"error")}
+    groupStatus(isSvg?"SVG 벡터 로고 준비 완료 · GitHub 저장 시 SVG 그대로 업로드합니다.":"비트맵 로고 준비 완료 · GitHub 저장 시 최적화 파일을 업로드합니다.","ok")
+  }catch(e){pendingGroupLogo=null;pendingGroupLogoMeta=null;groupStatus("로고 불러오기 실패: "+e.message,"error")}
 }
 function groupIdForNew(){return "g_"+Date.now().toString(36)}
-function saveGroup(){
+async function saveGroup(){
   const editing=editGroupId&&GROUPS[editGroupId],builtIn=!!editing?.builtIn,name=$("groupNameInput").value.trim();
   if(!name){groupStatus("그룹명을 입력하세요.","error");$("groupNameInput").focus();return}
   const duplicate=Object.entries(GROUPS).find(([id,g])=>id!==editGroupId&&g.label.toLocaleLowerCase("ko-KR")===name.toLocaleLowerCase("ko-KR"));
   if(duplicate){groupStatus(`이미 “${duplicate[1].label}” 그룹이 있습니다.`,"error");return}
   const id=editGroupId||groupIdForNew(),old=GROUPS[id]||{},aliases=[...(old.aliases||[])];
   if(!builtIn&&old.label&&old.label!==name&&!aliases.includes(old.label))aliases.push(old.label);
-  const next={label:builtIn?old.label:name,logo:pendingGroupLogo??old.logo??null,element:$("groupElementColor").value.toUpperCase(),text:$("groupTextColor").value.toUpperCase(),background:$("groupBackgroundDefaultCheck").checked?"auto":$("groupBackgroundColor").value.toUpperCase(),aliases};
+
+  let logo=pendingGroupLogo??old.logo??null,logoPath=old.logoPath||"";
+  const localDataForMigration=!pendingGroupLogo&&typeof old.logo==="string"&&old.logo.startsWith("data:image/")?old.logo:null;
+  const uploadData=pendingGroupLogo||localDataForMigration;
+  if(uploadData&&githubLogoUploadEnabled()){
+    if(!githubToken()){groupStatus("GitHub 로고 저장이 켜져 있습니다. 위에서 GitHub 연결을 먼저 완료하거나 GitHub 저장 옵션을 꺼 주세요.","error");return}
+    const btn=$("saveGroupBtn");btn.disabled=true;
+    try{
+      groupStatus("GitHub에 그룹 로고를 업로드하고 있습니다…");
+      const uploaded=await uploadLogoToGithub({groupId:id,name:builtIn?old.label:name,dataUrl:uploadData,oldPath:logoPath});
+      logo=uploaded.webPath;logoPath=uploaded.path;primeLogoAsset(logo,uploadData);
+      githubSetStatus(`${githubConnectedLogin||"GitHub"} 연결됨 · 방금 로고 업로드 완료`,"ok")
+    }catch(e){groupStatus("GitHub 로고 업로드 실패: "+e.message,"error");btn.disabled=false;return}
+    finally{btn.disabled=false}
+  }
+
+  const next={label:builtIn?old.label:name,logo,logoPath:logoPath||undefined,element:$("groupElementColor").value.toUpperCase(),text:$("groupTextColor").value.toUpperCase(),background:$("groupBackgroundDefaultCheck").checked?"auto":$("groupBackgroundColor").value.toUpperCase(),aliases};
   customGroups[id]=next;
   try{saveCustomGroups()}catch(e){groupStatus(e.message,"error");return}
-  assetCache.clear();logoMaskCache.clear();logoMetricsCache.clear();templateThumbCache.clear();initGroups(id);renderGroupManagerList();editGroup(id);queue();
-  groupStatus(`“${GROUPS[id].label}” 그룹을 저장했습니다. 대표 컬러는 ‘대표 컬러 적용’ 버튼으로 작업창에 반영할 수 있습니다.`,"ok")
+  assetCache.delete(old.logo);logoMaskCache.clear();logoMetricsCache.clear();templateThumbCache.clear();initGroups(id);renderGroupManagerList();editGroup(id);queue();
+  groupStatus(`“${GROUPS[id].label}” 그룹 저장 완료${logoPath?" · 로고는 GitHub 저장소에 보관됨":" · 로고는 브라우저에 보관됨"}`,"ok")
 }
-function deleteGroup(id){
-  const g=GROUPS[id];if(!g||g.builtIn)return;if(!confirm(`“${g.label}” 그룹을 삭제할까요?\n기존 프리셋/Excel에서 이 그룹을 참조하고 있다면 다른 그룹으로 다시 선택해야 합니다.`))return;
+
+async function deleteGroup(id){
+  const g=GROUPS[id];if(!g||g.builtIn)return;
+  const wantsRemote=!!g.logoPath&&!!githubToken();
+  const extra=wantsRemote?"\nGitHub 저장소의 로고 파일도 함께 삭제합니다.":g.logoPath?"\nGitHub 로고 파일은 연결 후 별도로 정리할 수 있습니다.":"";
+  if(!confirm(`“${g.label}” 그룹을 삭제할까요?\n기존 프리셋/Excel에서 이 그룹을 참조하고 있다면 다른 그룹으로 다시 선택해야 합니다.${extra}`))return;
+  if(wantsRemote){
+    try{groupStatus("GitHub 로고 파일을 삭제하고 있습니다…");await deleteLogoFromGithub(g.logoPath)}
+    catch(e){groupStatus("GitHub 로고 삭제 실패: "+e.message,"error");return}
+  }
   delete customGroups[id];try{saveCustomGroups()}catch(e){groupStatus(e.message,"error");return}
   if($("groupSelect").value===id)initGroups("IVE");else initGroups($("groupSelect").value);
   assetCache.clear();logoMaskCache.clear();logoMetricsCache.clear();templateThumbCache.clear();resetGroupEditor();queue();groupStatus(`“${g.label}” 그룹을 삭제했습니다.`,"ok")
@@ -902,7 +1027,7 @@ function initWorkspaceResizer(){
   })
 }
 
-function bind(){bindRange("focusX",0,100);bindRange("focusY",0,100);bindRange("zoom",100,500);bindRange("frontLogoScale",40,200);bindRange("frontLogoX",0,650);bindRange("frontLogoY",0,1004);bindRange("backLogoScale",40,200);bindRange("backLogoX",0,650);bindRange("backLogoY",0,1004);bindRange("signatureScale",40,220);bindRange("signatureX",0,650);bindRange("signatureY",0,1004);bindGestures();$("photoInput").onchange=e=>choosePhoto(e.target.files?.[0]);$("cutoutBtn").onclick=doCutout;$("restorePhotoBtn").onclick=restoreOriginalPhoto;$("nameInput").oninput=()=>{maybeName();queue()};$("templateSelect").onchange=()=>{const id=$("templateSelect").value;recordTemplateRecent(id);applyTemplateDefaults(id,true)};$("openTemplateBrowserBtn").onclick=openTemplateBrowser;$("closeTemplateBrowserBtn").onclick=()=>$("templateBrowserDialog").close();$("templateSearchInput").oninput=renderTemplateBrowser;$("schoolNameInput").oninput=queue;$("trumpSuitSelect").onchange=()=>{syncTrumpPicker("suit");syncTrumpPicker("rank");queue()};$("trumpRankInput").oninput=queue;$("trumpSuitColorSelect").onchange=()=>{syncTrumpPicker("suit");queue()};$("trumpRankColorSelect").onchange=()=>{syncTrumpPicker("rank");queue()};$("trumpSuitColorPicker").oninput=()=>trumpPickerToSelect("suit");$("trumpRankColorPicker").oninput=()=>trumpPickerToSelect("rank");$("signatureInput").onchange=e=>chooseSignature(e.target.files?.[0]);$("clearSignatureBtn").onclick=clearSignature;$("groupSelect").onchange=()=>{templateThumbCache.clear();updateGroupPaletteButton();queue()};$("applyGroupPaletteBtn").onclick=()=>applyGroupPalette();$("openGroupManagerBtn").onclick=openGroupManager;$("closeGroupManagerBtn").onclick=()=>$("groupManagerDialog").close();$("groupLogoInput").onchange=e=>chooseGroupLogo(e.target.files?.[0]);$("groupBackgroundDefaultCheck").onchange=e=>$("groupBackgroundColor").disabled=e.target.checked;$("saveGroupBtn").onclick=saveGroup;$("resetGroupEditorBtn").onclick=resetGroupEditor;$("backStyleSelect").onchange=queue;$("fontSelect").onchange=queue;$("logoOutlineCheck").onchange=queue;$("logoShadowCheck").onchange=queue;$("elementColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("element");queue()};$("textColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("text");queue()};$("backgroundColorSelect").onchange=()=>{templateThumbCache.clear();syncBackgroundPicker();queue()};$("elementColorPicker").oninput=()=>pickerToSelect("element");$("textColorPicker").oninput=()=>pickerToSelect("text");$("backgroundColorPicker").oninput=backgroundPickerToSelect;["trackingInput","fontSizeInput","textXInput","textYInput","shadowCheck","strokeColorPicker","strokeWidthInput"].forEach(id=>$(id).oninput=queue);$("resetCropBtn").onclick=()=>{setLinked("focusX",50);setLinked("focusY",50);setLinked("zoom",100);queue()};$("resetTextBtn").onclick=()=>{Object.assign($("trackingInput"),{value:4});$("fontSizeInput").value=31;$("textXInput").value=325;$("textYInput").value=903;$("shadowCheck").checked=true;$("strokeColorPicker").value="#FFFFFF";$("strokeWidthInput").value=1;queue()};$("centerGuideCheck").oninput=updateGuide;$("frontTabBtn").onclick=()=>switchSide("front");$("backTabBtn").onclick=()=>switchSide("back");$("filenameInput").oninput=()=>filenameEdited=true;$("outputSizeSelect").onchange=onWorkSettingsChange;$("exportGuideCheck").onchange=onWorkSettingsChange;$("generateBtn").onclick=saveCurrent;$("savePairBtn").onclick=savePair;$("savePathBtn").onclick=pickFolder;$("presetSelect").onchange=onPresetSelectionChange;$("applyPresetBtn").onclick=applySelectedPreset;$("savePresetBtn").onclick=saveNewPreset;$("overwritePresetBtn").onclick=overwriteSelectedPreset;$("renamePresetBtn").onclick=renameSelectedPreset;$("deletePresetBtn").onclick=deleteSelectedPreset;$("presetNameInput").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveNewPreset()}};$("saveDefaultsBtn").onclick=saveCurrentTemplateDefaults;$("resetDefaultsBtn").onclick=resetCurrentTemplateDefaults;$("sampleExcelBtn").onclick=sampleExcel;$("excelTemplateDownloadBtn").onclick=sampleExcel;$("excelImageFolderBtn").onclick=()=>$("excelImageFolderInput").click();$("excelImageFolderInput").onchange=e=>connectExcelImageFolder(e.target.files);$("excelInput").onchange=prepareBatch;$("imageFolderInput").onchange=prepareBatch;$("batchBtn").onclick=runBatch;$("excelDataLoadBtn").onclick=()=>$("excelDataInput").click();$("excelDataInput").onchange=e=>loadExcelPanel(e.target.files?.[0]);$("excelProgressSaveBtn").onclick=saveProgress;$("openColorManagerBtn").onclick=openColorManager;$("addCustomColorBtn").onclick=saveCustomColor;$("customColorPicker").oninput=e=>$("customColorHex").value=e.target.value.toUpperCase();$("customColorHex").oninput=e=>{const v=normalizeHex(e.target.value);if(v)$("customColorPicker").value=v}}
+function bind(){bindRange("focusX",0,100);bindRange("focusY",0,100);bindRange("zoom",100,500);bindRange("frontLogoScale",40,200);bindRange("frontLogoX",0,650);bindRange("frontLogoY",0,1004);bindRange("backLogoScale",40,200);bindRange("backLogoX",0,650);bindRange("backLogoY",0,1004);bindRange("signatureScale",40,220);bindRange("signatureX",0,650);bindRange("signatureY",0,1004);bindGestures();$("photoInput").onchange=e=>choosePhoto(e.target.files?.[0]);$("cutoutBtn").onclick=doCutout;$("restorePhotoBtn").onclick=restoreOriginalPhoto;$("nameInput").oninput=()=>{maybeName();queue()};$("templateSelect").onchange=()=>{const id=$("templateSelect").value;recordTemplateRecent(id);applyTemplateDefaults(id,true)};$("openTemplateBrowserBtn").onclick=openTemplateBrowser;$("closeTemplateBrowserBtn").onclick=()=>$("templateBrowserDialog").close();$("templateSearchInput").oninput=renderTemplateBrowser;$("schoolNameInput").oninput=queue;$("trumpSuitSelect").onchange=()=>{syncTrumpPicker("suit");syncTrumpPicker("rank");queue()};$("trumpRankInput").oninput=queue;$("trumpSuitColorSelect").onchange=()=>{syncTrumpPicker("suit");queue()};$("trumpRankColorSelect").onchange=()=>{syncTrumpPicker("rank");queue()};$("trumpSuitColorPicker").oninput=()=>trumpPickerToSelect("suit");$("trumpRankColorPicker").oninput=()=>trumpPickerToSelect("rank");$("signatureInput").onchange=e=>chooseSignature(e.target.files?.[0]);$("clearSignatureBtn").onclick=clearSignature;$("groupSelect").onchange=()=>{templateThumbCache.clear();updateGroupPaletteButton();queue()};$("applyGroupPaletteBtn").onclick=()=>applyGroupPalette();$("openGroupManagerBtn").onclick=openGroupManager;$("closeGroupManagerBtn").onclick=()=>$("groupManagerDialog").close();$("githubConnectBtn").onclick=verifyGithubConnection;$("githubDisconnectBtn").onclick=disconnectGithub;$("githubLogoUploadCheck").onchange=saveGithubLogoPref;$("groupLogoInput").onchange=e=>chooseGroupLogo(e.target.files?.[0]);$("groupBackgroundDefaultCheck").onchange=e=>$("groupBackgroundColor").disabled=e.target.checked;$("saveGroupBtn").onclick=saveGroup;$("resetGroupEditorBtn").onclick=resetGroupEditor;$("backStyleSelect").onchange=queue;$("fontSelect").onchange=queue;$("logoOutlineCheck").onchange=queue;$("logoShadowCheck").onchange=queue;$("elementColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("element");queue()};$("textColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("text");queue()};$("backgroundColorSelect").onchange=()=>{templateThumbCache.clear();syncBackgroundPicker();queue()};$("elementColorPicker").oninput=()=>pickerToSelect("element");$("textColorPicker").oninput=()=>pickerToSelect("text");$("backgroundColorPicker").oninput=backgroundPickerToSelect;["trackingInput","fontSizeInput","textXInput","textYInput","shadowCheck","strokeColorPicker","strokeWidthInput"].forEach(id=>$(id).oninput=queue);$("resetCropBtn").onclick=()=>{setLinked("focusX",50);setLinked("focusY",50);setLinked("zoom",100);queue()};$("resetTextBtn").onclick=()=>{Object.assign($("trackingInput"),{value:4});$("fontSizeInput").value=31;$("textXInput").value=325;$("textYInput").value=903;$("shadowCheck").checked=true;$("strokeColorPicker").value="#FFFFFF";$("strokeWidthInput").value=1;queue()};$("centerGuideCheck").oninput=updateGuide;$("frontTabBtn").onclick=()=>switchSide("front");$("backTabBtn").onclick=()=>switchSide("back");$("filenameInput").oninput=()=>filenameEdited=true;$("outputSizeSelect").onchange=onWorkSettingsChange;$("exportGuideCheck").onchange=onWorkSettingsChange;$("generateBtn").onclick=saveCurrent;$("savePairBtn").onclick=savePair;$("savePathBtn").onclick=pickFolder;$("presetSelect").onchange=onPresetSelectionChange;$("applyPresetBtn").onclick=applySelectedPreset;$("savePresetBtn").onclick=saveNewPreset;$("overwritePresetBtn").onclick=overwriteSelectedPreset;$("renamePresetBtn").onclick=renameSelectedPreset;$("deletePresetBtn").onclick=deleteSelectedPreset;$("presetNameInput").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveNewPreset()}};$("saveDefaultsBtn").onclick=saveCurrentTemplateDefaults;$("resetDefaultsBtn").onclick=resetCurrentTemplateDefaults;$("sampleExcelBtn").onclick=sampleExcel;$("excelTemplateDownloadBtn").onclick=sampleExcel;$("excelImageFolderBtn").onclick=()=>$("excelImageFolderInput").click();$("excelImageFolderInput").onchange=e=>connectExcelImageFolder(e.target.files);$("excelInput").onchange=prepareBatch;$("imageFolderInput").onchange=prepareBatch;$("batchBtn").onclick=runBatch;$("excelDataLoadBtn").onclick=()=>$("excelDataInput").click();$("excelDataInput").onchange=e=>loadExcelPanel(e.target.files?.[0]);$("excelProgressSaveBtn").onclick=saveProgress;$("openColorManagerBtn").onclick=openColorManager;$("addCustomColorBtn").onclick=saveCustomColor;$("customColorPicker").oninput=e=>$("customColorHex").value=e.target.value.toUpperCase();$("customColorHex").oninput=e=>{const v=normalizeHex(e.target.value);if(v)$("customColorPicker").value=v}}
 async function registerModelCacheWorker(){if(!("serviceWorker" in navigator))return;try{await navigator.serviceWorker.register("./service-worker.js",{scope:"./"});await navigator.serviceWorker.ready}catch(e){console.warn("모델 캐시 서비스 워커 등록 실패:",e)}}
-async function init(){registerModelCacheWorker();initWorkspaceResizer();initWorkSettings();resizePreviewBacking();initFonts();initTemplates();$("fontSelect").value="Playfair Display";$("logoOutlineCheck").checked=true;$("logoShadowCheck").checked=true;initColors();initGroups();updateTemplateExtras();bind();renderExcelHead();renderExcelBody();restoreProgress();const saved=loadJson(STORAGE_KEY,null);applyTemplateDefaults("ribbon",false);if(saved?.name)$("nameInput").value=saved.name;maybeName(true);saveDir=await loadHandle();pathText();switchSide("front");status("준비 완료. 사진을 선택하세요.",false,true);loadAsset(GROUPS.IVE.logo).catch(()=>{})}
+async function init(){registerModelCacheWorker();initWorkspaceResizer();initWorkSettings();initGithubLogoStorage();resizePreviewBacking();initFonts();initTemplates();$("fontSelect").value="Playfair Display";$("logoOutlineCheck").checked=true;$("logoShadowCheck").checked=true;initColors();initGroups();updateTemplateExtras();bind();renderExcelHead();renderExcelBody();restoreProgress();const saved=loadJson(STORAGE_KEY,null);applyTemplateDefaults("ribbon",false);if(saved?.name)$("nameInput").value=saved.name;maybeName(true);saveDir=await loadHandle();pathText();switchSide("front");status("준비 완료. 사진을 선택하세요.",false,true);loadAsset(GROUPS.IVE.logo).catch(()=>{})}
 init();
