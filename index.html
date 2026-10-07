@@ -5,8 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Photocard Maker</title>
 <meta name="description" content="브라우저에서 만드는 포토카드 메이커">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:wght@400;600&family=DM+Serif+Display&family=Great+Vibes&family=Montserrat:wght@400;600&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles.css?v=1">
-<link rel="stylesheet" href="./v2.css?v=2">
+<link rel="stylesheet" href="./v2.css?v=3">
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
@@ -33,7 +36,7 @@
           <div class="field"><label>출력 크기</label><input type="text" value="650 × 1004" readonly></div>
           <div class="field full-span"><label for="nameInput">이름</label><input id="nameInput" type="text" value="WONYOUNG"></div>
           <div class="field"><label for="groupSelect">그룹</label><select id="groupSelect"></select></div>
-          <div class="field"><label for="backStyleSelect">뒷면 스타일</label><select id="backStyleSelect"><option value="center">중앙형</option><option value="diagonal">대각형 (-45°)</option></select></div>
+          <div class="field"><label for="backStyleSelect">뒷면 스타일</label><select id="backStyleSelect"><option value="center">중앙형</option><option value="diagonal">대각형 (-45°)</option><option value="pattern">반복 패턴형 (-30°)</option></select></div>
           <div class="field"><label>요소 컬러</label><div class="color-row"><select id="elementColorSelect"></select><input id="elementColorPicker" type="color" value="#E7C68E"></div></div>
           <div class="field"><label>텍스트 컬러</label><div class="color-row"><select id="textColorSelect"></select><input id="textColorPicker" type="color" value="#F5E5C2"></div></div>
           <div class="field full-span"><button id="openColorManagerBtn" class="secondary wide" type="button">+ 사용자 색상 추가 / 관리</button></div>
@@ -52,6 +55,17 @@
         <details>
           <summary>텍스트 미세 조정</summary>
           <div class="details-body">
+            <div class="field font-field">
+              <label for="fontSelect">이름 폰트</label>
+              <select id="fontSelect">
+                <option value="Playfair Display">Playfair Display</option>
+                <option value="Cormorant Garamond">Cormorant Garamond</option>
+                <option value="DM Serif Display">DM Serif Display</option>
+                <option value="Montserrat">Montserrat</option>
+                <option value="Great Vibes">Great Vibes</option>
+                <option value="Bebas Neue">Bebas Neue</option>
+              </select>
+            </div>
             <div class="mini-grid">
               <label>자간<input id="trackingInput" type="number" min="0" max="14" value="4"></label>
               <label>폰트 크기<input id="fontSizeInput" type="number" min="20" max="60" value="31"></label>
@@ -63,6 +77,17 @@
               <label>테두리 색 <input id="strokeColorPicker" type="color" value="#FFFFFF"></label>
             </div>
             <button id="resetTextBtn" class="ghost" type="button">텍스트 초기화</button>
+          </div>
+        </details>
+
+        <details>
+          <summary>그룹 로고 효과</summary>
+          <div class="details-body">
+            <div class="inline-options logo-effect-options">
+              <label class="check"><input id="logoOutlineCheck" type="checkbox" checked> 검정 외곽선 1px</label>
+              <label class="check"><input id="logoShadowCheck" type="checkbox" checked> 부드러운 그림자</label>
+            </div>
+            <small class="option-note">밝은 사진이나 연한 배경에서도 로고가 묻히지 않도록 기본 적용됩니다.</small>
           </div>
         </details>
 
@@ -160,6 +185,6 @@
 </dialog>
 
 <footer>렌더링은 사용자 브라우저 안에서 실행됩니다. 사진은 서버로 업로드하지 않습니다.</footer>
-<script type="module" src="./app-v2.js?v=3"></script>
+<script type="module" src="./app-v2.js?v=4"></script>
 </body>
 </html>
