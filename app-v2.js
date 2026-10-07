@@ -7,12 +7,24 @@ const TEMPLATE_FAVORITES_KEY="photocard-maker-template-favorites-v1";
 const TEMPLATE_RECENTS_KEY="photocard-maker-template-recents-v1";
 const TEMPLATE_PRESETS_KEY="photocard-maker-template-presets-v1";
 const WORKSPACE_SPLIT_KEY="photocard-maker-workspace-split-v1";
+const GROUP_KEY="photocard-maker-v2-custom-groups";
 const COLOR_KEY="photocard-maker-v2-custom-colors";
 const PROGRESS_KEY="photocard-maker-v2-excel-progress";
 const DB_NAME="photocard-maker-storage",DB_STORE="handles",DB_KEY="folder";
 const COLUMNS=["템플릿","그룹","요소 컬러","텍스트 컬러","배경 컬러","이름","이미지명","저장파일명"];
 const BASE_COLORS={"샴페인 골드":"#E7C68E","아이보리 골드":"#F5E5C2","벚꽃 핑크":"#F3B6C4","라일락":"#CDB8E8","로즈골드":"#D8A0A6","진주빛 아이보리":"#F4EFE3","크림 아이보리":"#F6EBD8","파우더 블루":"#B9D2E7","민트":"#B8DCCF","복숭아빛":"#F3BEA8","연핑크":"#F4BBC8","골드":"#D9B76E","실버":"#D7D9DE","화이트":"#FFFFFF","블랙":"#111111"};
-const GROUPS={"":{label:"로고 없음",logo:null},"IVE":{label:"IVE",logo:"./assets/logos/ive.png"}};
+const BASE_GROUPS={
+  "":{label:"로고 없음",logo:null,element:"#E7C68E",text:"#F5E5C2",background:"auto",builtIn:true},
+  "IVE":{label:"IVE",logo:"./assets/logos/ive.png",element:"#E7C68E",text:"#F5E5C2",background:"auto",builtIn:true}
+};
+let customGroups=loadJson(GROUP_KEY,{});
+const GROUPS={};
+function rebuildGroups(){
+  for(const k of Object.keys(GROUPS))delete GROUPS[k];
+  for(const [id,g] of Object.entries(BASE_GROUPS))GROUPS[id]={...g,...(customGroups[id]||{}),builtIn:true};
+  for(const [id,g] of Object.entries(customGroups))if(!(id in BASE_GROUPS))GROUPS[id]={...g,builtIn:false}
+}
+rebuildGroups();
 const FONTS={...FONT_MAP};
 const logoMaskCache=new Map();
 const logoMetricsCache=new Map();
@@ -22,7 +34,7 @@ let cutoutModule=null;
 const CUTOUT_CONFIG={model:"isnet",output:{format:"image/png",quality:1}};
 function webGpuAvailable(){return typeof navigator!=="undefined"&&!!navigator.gpu}
 let batchRows=[],batchFiles=[],excelImageFiles=[],excelRows=[],selectedId=null,sortCol=null,sortDesc=false,filters=Object.fromEntries(COLUMNS.map(c=>[c,""]));
-let editColorName=null;
+let editColorName=null,editGroupId=null,pendingGroupLogo=null;
 let templateBrowserFilter="all",templateThumbToken=0,templateThumbPlaceholder=null;
 const templateThumbCache=new Map();
 const assetCache=new Map();
@@ -63,8 +75,94 @@ function editColor(n){if(!customColors[n])return;editColorName=n;$("customColorN
 function deleteColor(n){const suitOld=$("trumpSuitColorSelect")?.value||"auto",rankOld=$("trumpRankColorSelect")?.value||"auto",bgOld=$("backgroundColorSelect")?.value||"auto";delete customColors[n];saveJson(COLOR_KEY,customColors);colorOptions("elementColorSelect");colorOptions("textColorSelect");backgroundColorOptions(bgOld);trumpColorOptions("trumpSuitColorSelect",suitOld);trumpColorOptions("trumpRankColorSelect",rankOld);syncPicker("element");syncPicker("text");syncBackgroundPicker();syncTrumpPicker("suit");syncTrumpPicker("rank");renderCustomColors();queue()}
 function initColors(){colorOptions("elementColorSelect","샴페인 골드");colorOptions("textColorSelect","아이보리 골드");backgroundColorOptions("auto");trumpColorOptions("trumpSuitColorSelect","auto");trumpColorOptions("trumpRankColorSelect","auto");syncPicker("element");syncPicker("text");syncBackgroundPicker();syncTrumpPicker("suit");syncTrumpPicker("rank");renderCustomColors()}
 
-function initGroups(){const s=$("groupSelect");s.innerHTML=Object.entries(GROUPS).map(([id,g])=>`<option value="${esc(id)}">${esc(g.label)}</option>`).join("");s.value="IVE"}
-function groupIdFromValue(v,fallback="IVE"){const q=String(v??"").trim();if(q in GROUPS)return q;const hit=Object.entries(GROUPS).find(([,g])=>String(g.label).trim()===q);return hit?hit[0]:fallback}
+function initGroups(preferred="IVE"){
+  const s=$("groupSelect"),old=preferred??s.value;
+  const base=Object.entries(GROUPS).filter(([id,g])=>g.builtIn).map(([id,g])=>`<option value="${esc(id)}">${esc(g.label)}</option>`).join("");
+  const mine=Object.entries(GROUPS).filter(([id,g])=>!g.builtIn).sort((a,b)=>a[1].label.localeCompare(b[1].label,"ko-KR")).map(([id,g])=>`<option value="${esc(id)}">${esc(g.label)}</option>`).join("");
+  s.innerHTML=`<optgroup label="기본 그룹">${base}</optgroup>`+(mine?`<optgroup label="내 그룹">${mine}</optgroup>`:"");
+  s.value=(old in GROUPS)?old:("IVE" in GROUPS?"IVE":"");
+  updateGroupPaletteButton()
+}
+function groupIdFromValue(v,fallback="IVE"){
+  const q=String(v??"").trim();if(q in GROUPS)return q;
+  const hit=Object.entries(GROUPS).find(([,g])=>String(g.label).trim()===q||(g.aliases||[]).some(a=>String(a).trim()===q));
+  return hit?hit[0]:((fallback in GROUPS)?fallback:"")
+}
+function saveCustomGroups(){
+  try{localStorage.setItem(GROUP_KEY,JSON.stringify(customGroups));rebuildGroups()}
+  catch(e){throw new Error("그룹 저장 공간이 부족합니다. 로고 이미지를 더 작은 파일로 다시 등록해 주세요.")}
+}
+function groupStatus(msg,type=""){const e=$("groupManagerStatus");if(!e)return;e.textContent=msg;e.className="preset-status"+(type?" "+type:"")}
+function groupPalette(id=$("groupSelect")?.value){const g=GROUPS[id];return g?{element:g.element||"#E7C68E",text:g.text||"#F5E5C2",background:g.background??"auto"}:null}
+function updateGroupPaletteButton(){
+  const b=$("applyGroupPaletteBtn");if(!b)return;const g=GROUPS[$("groupSelect")?.value];
+  b.disabled=!g;b.title=g?`${g.label} 대표 컬러 적용`:"대표 컬러 없음"
+}
+function applyGroupPalette(id=$("groupSelect").value){
+  const g=GROUPS[id];if(!g)return;
+  applyColor("element",g.element||"#E7C68E");applyColor("text",g.text||"#F5E5C2");applyBackgroundColor(g.background??"auto");
+  templateThumbCache.clear();queue();status(g.label+" 대표 컬러를 적용했습니다.",false,true)
+}
+function groupLogoPreview(src){
+  const img=$("groupLogoPreview"),empty=$("groupLogoPreviewEmpty");
+  if(src){img.src=src;img.hidden=false;empty.hidden=true}else{img.removeAttribute("src");img.hidden=true;empty.hidden=false}
+}
+async function optimizeGroupLogo(file){
+  if(!file)return null;
+  const bmp=await createImageBitmap(file,{imageOrientation:"from-image"}),max=900,scale=Math.min(1,max/Math.max(bmp.width,bmp.height)),w=Math.max(1,Math.round(bmp.width*scale)),h=Math.max(1,Math.round(bmp.height*scale));
+  const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(bmp,0,0,w,h);bmp.close?.();
+  let url=c.toDataURL("image/webp",.92);if(!url.startsWith("data:image/webp"))url=c.toDataURL("image/png");
+  return url
+}
+function resetGroupEditor(){
+  editGroupId=null;pendingGroupLogo=null;$("groupEditorTitle").textContent="새 그룹 추가";$("groupNameInput").disabled=false;$("groupNameInput").value="";
+  $("groupLogoInput").value="";$("groupElementColor").value="#E7C68E";$("groupTextColor").value="#F5E5C2";$("groupBackgroundColor").value="#FFFFFF";$("groupBackgroundDefaultCheck").checked=true;$("groupBackgroundColor").disabled=true;
+  $("saveGroupBtn").textContent="그룹 저장";groupLogoPreview(null);renderGroupManagerList();groupStatus("새 그룹을 추가하거나 오른쪽 목록에서 수정할 그룹을 선택하세요.")
+}
+function editGroup(id){
+  const g=GROUPS[id];if(!g)return;editGroupId=id;pendingGroupLogo=null;$("groupEditorTitle").textContent=g.builtIn?g.label+" 기본 그룹 설정":g.label+" 수정";$("groupNameInput").value=g.label;
+  $("groupNameInput").disabled=!!g.builtIn;$("groupLogoInput").value="";$("groupElementColor").value=colorValue(g.element,"#E7C68E");$("groupTextColor").value=colorValue(g.text,"#F5E5C2");
+  const auto=!g.background||g.background==="auto";$("groupBackgroundDefaultCheck").checked=auto;$("groupBackgroundColor").disabled=auto;$("groupBackgroundColor").value=auto?"#FFFFFF":colorValue(g.background,"#FFFFFF");
+  $("saveGroupBtn").textContent="변경 저장";groupLogoPreview(g.logo);renderGroupManagerList();groupStatus(g.builtIn?"기본 그룹은 이름과 삭제는 잠겨 있고 로고·대표 컬러는 수정할 수 있습니다.":"현재 그룹 정보를 수정하고 있습니다.")
+}
+function renderGroupManagerList(){
+  const root=$("groupManagerList");if(!root)return;
+  const entries=Object.entries(GROUPS).filter(([id])=>id!=="").sort((a,b)=>Number(b[1].builtIn)-Number(a[1].builtIn)||a[1].label.localeCompare(b[1].label,"ko-KR"));
+  $("groupCountLabel").textContent=`총 ${entries.length}개`;
+  root.innerHTML=entries.map(([id,g])=>`<div class="group-item${editGroupId===id?" selected":""}" data-group-id="${esc(id)}">
+    <div class="group-item-logo">${g.logo?`<img src="${esc(g.logo)}" alt="">`:"<span>로고 없음</span>"}</div>
+    <div><div class="group-item-name">${esc(g.label)}</div><div class="group-item-kind">${g.builtIn?"기본 그룹":"내 그룹"}</div>
+      <div class="group-item-swatches"><span class="group-item-swatch" title="요소" style="background:${esc(colorValue(g.element,"#E7C68E"))}"></span><span class="group-item-swatch" title="텍스트" style="background:${esc(colorValue(g.text,"#F5E5C2"))}"></span><span class="group-item-swatch" title="배경" style="background:${esc(g.background&&g.background!=="auto"?colorValue(g.background,"#FFFFFF"):"#FFFFFF")}"></span></div>
+    </div>
+    <div class="group-item-actions"><button class="ghost edit-group-btn" type="button" data-id="${esc(id)}">수정</button>${g.builtIn?"":`<button class="ghost danger-ghost delete-group-btn" type="button" data-id="${esc(id)}">삭제</button>`}</div>
+  </div>`).join("");
+  root.querySelectorAll(".edit-group-btn").forEach(b=>b.onclick=()=>editGroup(b.dataset.id));
+  root.querySelectorAll(".delete-group-btn").forEach(b=>b.onclick=()=>deleteGroup(b.dataset.id))
+}
+function openGroupManager(){resetGroupEditor();$("groupManagerDialog").showModal()}
+async function chooseGroupLogo(file){
+  if(!file)return;try{groupStatus("로고를 최적화하고 있습니다…");pendingGroupLogo=await optimizeGroupLogo(file);groupLogoPreview(pendingGroupLogo);groupStatus("로고 준비 완료.","ok")}catch(e){groupStatus("로고 불러오기 실패: "+e.message,"error")}
+}
+function groupIdForNew(){return "g_"+Date.now().toString(36)}
+function saveGroup(){
+  const editing=editGroupId&&GROUPS[editGroupId],builtIn=!!editing?.builtIn,name=$("groupNameInput").value.trim();
+  if(!name){groupStatus("그룹명을 입력하세요.","error");$("groupNameInput").focus();return}
+  const duplicate=Object.entries(GROUPS).find(([id,g])=>id!==editGroupId&&g.label.toLocaleLowerCase("ko-KR")===name.toLocaleLowerCase("ko-KR"));
+  if(duplicate){groupStatus(`이미 “${duplicate[1].label}” 그룹이 있습니다.`,"error");return}
+  const id=editGroupId||groupIdForNew(),old=GROUPS[id]||{},aliases=[...(old.aliases||[])];
+  if(!builtIn&&old.label&&old.label!==name&&!aliases.includes(old.label))aliases.push(old.label);
+  const next={label:builtIn?old.label:name,logo:pendingGroupLogo??old.logo??null,element:$("groupElementColor").value.toUpperCase(),text:$("groupTextColor").value.toUpperCase(),background:$("groupBackgroundDefaultCheck").checked?"auto":$("groupBackgroundColor").value.toUpperCase(),aliases};
+  customGroups[id]=next;
+  try{saveCustomGroups()}catch(e){groupStatus(e.message,"error");return}
+  assetCache.clear();logoMaskCache.clear();logoMetricsCache.clear();templateThumbCache.clear();initGroups(id);renderGroupManagerList();editGroup(id);queue();
+  groupStatus(`“${GROUPS[id].label}” 그룹을 저장했습니다. 대표 컬러는 ‘대표 컬러 적용’ 버튼으로 작업창에 반영할 수 있습니다.`,"ok")
+}
+function deleteGroup(id){
+  const g=GROUPS[id];if(!g||g.builtIn)return;if(!confirm(`“${g.label}” 그룹을 삭제할까요?\n기존 프리셋/Excel에서 이 그룹을 참조하고 있다면 다른 그룹으로 다시 선택해야 합니다.`))return;
+  delete customGroups[id];try{saveCustomGroups()}catch(e){groupStatus(e.message,"error");return}
+  if($("groupSelect").value===id)initGroups("IVE");else initGroups($("groupSelect").value);
+  assetCache.clear();logoMaskCache.clear();logoMetricsCache.clear();templateThumbCache.clear();resetGroupEditor();queue();groupStatus(`“${g.label}” 그룹을 삭제했습니다.`,"ok")
+}
 function initTemplates(){const s=$("templateSelect");s.innerHTML=getTemplateList().map(t=>`<option value="${esc(t.id)}">${esc(t.label)}</option>`).join("");if(!TEMPLATE_REGISTRY[s.value])s.value="ribbon"}
 const TEMPLATE_BROWSER_FILTERS=[
   ["all","전체"],["favorite","★ 즐겨찾기"],["recent","최근 사용"],
@@ -664,7 +762,7 @@ function initWorkspaceResizer(){
   })
 }
 
-function bind(){bindRange("focusX",0,100);bindRange("focusY",0,100);bindRange("zoom",100,500);bindRange("frontLogoScale",40,200);bindRange("frontLogoX",0,650);bindRange("frontLogoY",0,1004);bindRange("backLogoScale",40,200);bindRange("backLogoX",0,650);bindRange("backLogoY",0,1004);bindRange("signatureScale",40,220);bindRange("signatureX",0,650);bindRange("signatureY",0,1004);bindGestures();$("photoInput").onchange=e=>choosePhoto(e.target.files?.[0]);$("cutoutBtn").onclick=doCutout;$("restorePhotoBtn").onclick=restoreOriginalPhoto;$("nameInput").oninput=()=>{maybeName();queue()};$("templateSelect").onchange=()=>{const id=$("templateSelect").value;recordTemplateRecent(id);applyTemplateDefaults(id,true)};$("openTemplateBrowserBtn").onclick=openTemplateBrowser;$("closeTemplateBrowserBtn").onclick=()=>$("templateBrowserDialog").close();$("templateSearchInput").oninput=renderTemplateBrowser;$("schoolNameInput").oninput=queue;$("trumpSuitSelect").onchange=()=>{syncTrumpPicker("suit");syncTrumpPicker("rank");queue()};$("trumpRankInput").oninput=queue;$("trumpSuitColorSelect").onchange=()=>{syncTrumpPicker("suit");queue()};$("trumpRankColorSelect").onchange=()=>{syncTrumpPicker("rank");queue()};$("trumpSuitColorPicker").oninput=()=>trumpPickerToSelect("suit");$("trumpRankColorPicker").oninput=()=>trumpPickerToSelect("rank");$("signatureInput").onchange=e=>chooseSignature(e.target.files?.[0]);$("clearSignatureBtn").onclick=clearSignature;$("groupSelect").onchange=()=>{templateThumbCache.clear();queue()};$("backStyleSelect").onchange=queue;$("fontSelect").onchange=queue;$("logoOutlineCheck").onchange=queue;$("logoShadowCheck").onchange=queue;$("elementColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("element");queue()};$("textColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("text");queue()};$("backgroundColorSelect").onchange=()=>{templateThumbCache.clear();syncBackgroundPicker();queue()};$("elementColorPicker").oninput=()=>pickerToSelect("element");$("textColorPicker").oninput=()=>pickerToSelect("text");$("backgroundColorPicker").oninput=backgroundPickerToSelect;["trackingInput","fontSizeInput","textXInput","textYInput","shadowCheck","strokeColorPicker","strokeWidthInput"].forEach(id=>$(id).oninput=queue);$("resetCropBtn").onclick=()=>{setLinked("focusX",50);setLinked("focusY",50);setLinked("zoom",100);queue()};$("resetTextBtn").onclick=()=>{Object.assign($("trackingInput"),{value:4});$("fontSizeInput").value=31;$("textXInput").value=325;$("textYInput").value=903;$("shadowCheck").checked=true;$("strokeColorPicker").value="#FFFFFF";$("strokeWidthInput").value=1;queue()};$("centerGuideCheck").oninput=updateGuide;$("frontTabBtn").onclick=()=>switchSide("front");$("backTabBtn").onclick=()=>switchSide("back");$("filenameInput").oninput=()=>filenameEdited=true;$("generateBtn").onclick=saveCurrent;$("savePairBtn").onclick=savePair;$("savePathBtn").onclick=pickFolder;$("presetSelect").onchange=onPresetSelectionChange;$("applyPresetBtn").onclick=applySelectedPreset;$("savePresetBtn").onclick=saveNewPreset;$("overwritePresetBtn").onclick=overwriteSelectedPreset;$("renamePresetBtn").onclick=renameSelectedPreset;$("deletePresetBtn").onclick=deleteSelectedPreset;$("presetNameInput").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveNewPreset()}};$("saveDefaultsBtn").onclick=saveCurrentTemplateDefaults;$("resetDefaultsBtn").onclick=resetCurrentTemplateDefaults;$("sampleExcelBtn").onclick=sampleExcel;$("excelTemplateDownloadBtn").onclick=sampleExcel;$("excelImageFolderBtn").onclick=()=>$("excelImageFolderInput").click();$("excelImageFolderInput").onchange=e=>connectExcelImageFolder(e.target.files);$("excelInput").onchange=prepareBatch;$("imageFolderInput").onchange=prepareBatch;$("batchBtn").onclick=runBatch;$("excelDataLoadBtn").onclick=()=>$("excelDataInput").click();$("excelDataInput").onchange=e=>loadExcelPanel(e.target.files?.[0]);$("excelProgressSaveBtn").onclick=saveProgress;$("openColorManagerBtn").onclick=openColorManager;$("addCustomColorBtn").onclick=saveCustomColor;$("customColorPicker").oninput=e=>$("customColorHex").value=e.target.value.toUpperCase();$("customColorHex").oninput=e=>{const v=normalizeHex(e.target.value);if(v)$("customColorPicker").value=v}}
+function bind(){bindRange("focusX",0,100);bindRange("focusY",0,100);bindRange("zoom",100,500);bindRange("frontLogoScale",40,200);bindRange("frontLogoX",0,650);bindRange("frontLogoY",0,1004);bindRange("backLogoScale",40,200);bindRange("backLogoX",0,650);bindRange("backLogoY",0,1004);bindRange("signatureScale",40,220);bindRange("signatureX",0,650);bindRange("signatureY",0,1004);bindGestures();$("photoInput").onchange=e=>choosePhoto(e.target.files?.[0]);$("cutoutBtn").onclick=doCutout;$("restorePhotoBtn").onclick=restoreOriginalPhoto;$("nameInput").oninput=()=>{maybeName();queue()};$("templateSelect").onchange=()=>{const id=$("templateSelect").value;recordTemplateRecent(id);applyTemplateDefaults(id,true)};$("openTemplateBrowserBtn").onclick=openTemplateBrowser;$("closeTemplateBrowserBtn").onclick=()=>$("templateBrowserDialog").close();$("templateSearchInput").oninput=renderTemplateBrowser;$("schoolNameInput").oninput=queue;$("trumpSuitSelect").onchange=()=>{syncTrumpPicker("suit");syncTrumpPicker("rank");queue()};$("trumpRankInput").oninput=queue;$("trumpSuitColorSelect").onchange=()=>{syncTrumpPicker("suit");queue()};$("trumpRankColorSelect").onchange=()=>{syncTrumpPicker("rank");queue()};$("trumpSuitColorPicker").oninput=()=>trumpPickerToSelect("suit");$("trumpRankColorPicker").oninput=()=>trumpPickerToSelect("rank");$("signatureInput").onchange=e=>chooseSignature(e.target.files?.[0]);$("clearSignatureBtn").onclick=clearSignature;$("groupSelect").onchange=()=>{templateThumbCache.clear();updateGroupPaletteButton();queue()};$("applyGroupPaletteBtn").onclick=()=>applyGroupPalette();$("openGroupManagerBtn").onclick=openGroupManager;$("closeGroupManagerBtn").onclick=()=>$("groupManagerDialog").close();$("groupLogoInput").onchange=e=>chooseGroupLogo(e.target.files?.[0]);$("groupBackgroundDefaultCheck").onchange=e=>$("groupBackgroundColor").disabled=e.target.checked;$("saveGroupBtn").onclick=saveGroup;$("resetGroupEditorBtn").onclick=resetGroupEditor;$("backStyleSelect").onchange=queue;$("fontSelect").onchange=queue;$("logoOutlineCheck").onchange=queue;$("logoShadowCheck").onchange=queue;$("elementColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("element");queue()};$("textColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("text");queue()};$("backgroundColorSelect").onchange=()=>{templateThumbCache.clear();syncBackgroundPicker();queue()};$("elementColorPicker").oninput=()=>pickerToSelect("element");$("textColorPicker").oninput=()=>pickerToSelect("text");$("backgroundColorPicker").oninput=backgroundPickerToSelect;["trackingInput","fontSizeInput","textXInput","textYInput","shadowCheck","strokeColorPicker","strokeWidthInput"].forEach(id=>$(id).oninput=queue);$("resetCropBtn").onclick=()=>{setLinked("focusX",50);setLinked("focusY",50);setLinked("zoom",100);queue()};$("resetTextBtn").onclick=()=>{Object.assign($("trackingInput"),{value:4});$("fontSizeInput").value=31;$("textXInput").value=325;$("textYInput").value=903;$("shadowCheck").checked=true;$("strokeColorPicker").value="#FFFFFF";$("strokeWidthInput").value=1;queue()};$("centerGuideCheck").oninput=updateGuide;$("frontTabBtn").onclick=()=>switchSide("front");$("backTabBtn").onclick=()=>switchSide("back");$("filenameInput").oninput=()=>filenameEdited=true;$("generateBtn").onclick=saveCurrent;$("savePairBtn").onclick=savePair;$("savePathBtn").onclick=pickFolder;$("presetSelect").onchange=onPresetSelectionChange;$("applyPresetBtn").onclick=applySelectedPreset;$("savePresetBtn").onclick=saveNewPreset;$("overwritePresetBtn").onclick=overwriteSelectedPreset;$("renamePresetBtn").onclick=renameSelectedPreset;$("deletePresetBtn").onclick=deleteSelectedPreset;$("presetNameInput").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveNewPreset()}};$("saveDefaultsBtn").onclick=saveCurrentTemplateDefaults;$("resetDefaultsBtn").onclick=resetCurrentTemplateDefaults;$("sampleExcelBtn").onclick=sampleExcel;$("excelTemplateDownloadBtn").onclick=sampleExcel;$("excelImageFolderBtn").onclick=()=>$("excelImageFolderInput").click();$("excelImageFolderInput").onchange=e=>connectExcelImageFolder(e.target.files);$("excelInput").onchange=prepareBatch;$("imageFolderInput").onchange=prepareBatch;$("batchBtn").onclick=runBatch;$("excelDataLoadBtn").onclick=()=>$("excelDataInput").click();$("excelDataInput").onchange=e=>loadExcelPanel(e.target.files?.[0]);$("excelProgressSaveBtn").onclick=saveProgress;$("openColorManagerBtn").onclick=openColorManager;$("addCustomColorBtn").onclick=saveCustomColor;$("customColorPicker").oninput=e=>$("customColorHex").value=e.target.value.toUpperCase();$("customColorHex").oninput=e=>{const v=normalizeHex(e.target.value);if(v)$("customColorPicker").value=v}}
 async function registerModelCacheWorker(){if(!("serviceWorker" in navigator))return;try{await navigator.serviceWorker.register("./service-worker.js",{scope:"./"});await navigator.serviceWorker.ready}catch(e){console.warn("모델 캐시 서비스 워커 등록 실패:",e)}}
 async function init(){registerModelCacheWorker();initWorkspaceResizer();initFonts();initTemplates();$("fontSelect").value="Playfair Display";$("logoOutlineCheck").checked=true;$("logoShadowCheck").checked=true;initColors();initGroups();updateTemplateExtras();bind();renderExcelHead();renderExcelBody();restoreProgress();const saved=loadJson(STORAGE_KEY,null);applyTemplateDefaults("ribbon",false);if(saved?.name)$("nameInput").value=saved.name;maybeName(true);saveDir=await loadHandle();pathText();switchSide("front");status("준비 완료. 사진을 선택하세요.",false,true);loadAsset(GROUPS.IVE.logo).catch(()=>{})}
 init();
