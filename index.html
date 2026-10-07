@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Allura&family=Bebas+Neue&family=Bodoni+Moda:wght@400;600&family=Bungee&family=Caveat:wght@400;600&family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@400;600&family=DM+Serif+Display&family=Dancing+Script:wght@400;600&family=Great+Vibes&family=Inter:wght@400;600&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;600&family=Montserrat:wght@400;600&family=Orbitron:wght@400;600&family=Oswald:wght@400;600&family=Pacifico&family=Parisienne&family=Playfair+Display:wght@400;600&family=Poppins:wght@400;600&family=Prata&family=Press+Start+2P&family=Quicksand:wght@400;600&family=Raleway:wght@400;600&family=Righteous&family=Sacramento&family=Satisfy&family=Space+Grotesk:wght@400;600&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles.css?v=1">
-<link rel="stylesheet" href="./v2.css?v=9">
+<link rel="stylesheet" href="./v2.css?v=10">
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
@@ -36,7 +36,13 @@
         </div>
 
         <div class="grid2">
-          <div class="field"><label for="templateSelect">템플릿</label><select id="templateSelect"></select></div>
+          <div class="field">
+            <label for="templateSelect">템플릿</label>
+            <div class="template-select-row">
+              <select id="templateSelect"></select>
+              <button id="openTemplateBrowserBtn" class="secondary template-browser-open" type="button">찾아보기</button>
+            </div>
+          </div>
           <div class="field"><label>출력 크기</label><input type="text" value="650 × 1004" readonly></div>
           <div class="field full-span"><label for="nameInput">이름</label><input id="nameInput" type="text" value="WONYOUNG"></div>
           <div class="field"><label for="groupSelect">그룹</label><select id="groupSelect"></select></div>
@@ -261,7 +267,29 @@
   </form>
 </dialog>
 
+
+<dialog id="templateBrowserDialog" class="template-browser-dialog">
+  <div class="template-browser-inner">
+    <div class="dialog-head template-browser-head">
+      <div>
+        <h2>템플릿 찾아보기</h2>
+        <p>썸네일로 비교하고 검색 · 카테고리 · 즐겨찾기 · 최근 사용으로 빠르게 찾을 수 있습니다.</p>
+      </div>
+      <button id="closeTemplateBrowserBtn" class="ghost" type="button">닫기</button>
+    </div>
+    <div class="template-browser-toolbar">
+      <div class="template-search-wrap"><input id="templateSearchInput" type="search" placeholder="템플릿 검색 (예: 리본, Chrome, Sakura)"></div>
+      <div id="templateFilterChips" class="template-filter-chips"></div>
+    </div>
+    <div class="template-browser-meta">
+      <span id="templateBrowserCount">0개 표시</span>
+      <span>★ 버튼으로 즐겨찾기 · 카드 클릭으로 즉시 적용</span>
+    </div>
+    <div id="templateBrowserGrid" class="template-browser-grid"></div>
+  </div>
+</dialog>
+
 <footer>렌더링은 사용자 브라우저 안에서 실행됩니다. 사진은 서버로 업로드하지 않습니다.</footer>
-<script type="module" src="./app-v2.js?v=16"></script>
+<script type="module" src="./app-v2.js?v=17"></script>
 </body>
 </html>
