@@ -1,10 +1,11 @@
-import {FONT_REGISTRY,FONT_MAP,TEMPLATE_REGISTRY,getTemplate,getTemplateList,renderTemplateFront,renderTemplateBack} from "./templates.js?v=9";
+import {FONT_REGISTRY,FONT_MAP,TEMPLATE_REGISTRY,getTemplate,getTemplateList,renderTemplateFront,renderTemplateBack} from "./templates.js?v=10";
 const $=id=>document.getElementById(id);
 const W=650,H=1004,R=38;
 const STORAGE_KEY="photocard-maker-v2-defaults";
 const TEMPLATE_DEFAULTS_KEY="photocard-maker-template-defaults-v1";
 const TEMPLATE_FAVORITES_KEY="photocard-maker-template-favorites-v1";
 const TEMPLATE_RECENTS_KEY="photocard-maker-template-recents-v1";
+const TEMPLATE_PRESETS_KEY="photocard-maker-template-presets-v1";
 const COLOR_KEY="photocard-maker-v2-custom-colors";
 const PROGRESS_KEY="photocard-maker-v2-excel-progress";
 const DB_NAME="photocard-maker-storage",DB_STORE="handles",DB_KEY="folder";
@@ -138,7 +139,7 @@ function renderTemplateBrowser(){
   root.innerHTML=items.map(t=>`<div class="template-browser-card${selected===t.id?" selected":""}" role="button" tabindex="0" data-id="${esc(t.id)}">
     <button type="button" class="template-favorite-btn${fav.has(t.id)?" active":""}" data-favorite="${esc(t.id)}" title="즐겨찾기">${fav.has(t.id)?"★":"☆"}</button>
     <div class="template-thumb-wrap" data-thumb="${esc(t.id)}"><div class="template-thumb-placeholder">미리보기 생성 중…</div></div>
-    <div class="template-card-info"><div class="template-card-title">${esc(t.label)}</div><div class="template-card-category">${esc(TEMPLATE_BROWSER_FILTERS.find(x=>x[0]===templateBrowserGroup(t.category))?.[1]||t.category)}</div></div>
+    <div class="template-card-info"><div class="template-card-title">${esc(t.label)}</div><div class="template-card-category"><span>${esc(TEMPLATE_BROWSER_FILTERS.find(x=>x[0]===templateBrowserGroup(t.category))?.[1]||t.category)}</span>${templatePresetCount(t.id)?`<span class="template-preset-count">프리셋 ${templatePresetCount(t.id)}</span>`:""}</div></div>
   </div>`).join("");
   root.querySelectorAll(".template-favorite-btn").forEach(b=>b.onclick=e=>{e.stopPropagation();toggleTemplateFavorite(b.dataset.favorite)});
   const choose=card=>{const id=card.dataset.id;recordTemplateRecent(id);applyTemplateDefaults(id,true);$("templateBrowserDialog").close()};
@@ -153,7 +154,102 @@ function templateIdFromValue(v){const q=String(v||"").trim().toLowerCase();if(TE
 function updateTemplateExtras(){const t=getTemplate($("templateSelect").value),extras=new Set(t.extras||[]);$("schoolNameField").hidden=!extras.has("schoolName");$("signatureImageField").hidden=!extras.has("signatureImage");$("trumpOptionsField").hidden=!extras.has("trumpOptions");const trump=t.id==="trump";$("cutoutBtn").hidden=!trump;$("restorePhotoBtn").hidden=!trump}
 function templateUserDefaults(){return loadJson(TEMPLATE_DEFAULTS_KEY,{})}
 function templateDefaultState(id){const t=getTemplate(id),saved=templateUserDefaults()[t.id]||{};return {...(t.defaults||{}),...saved}}
-function applyTemplateDefaults(id,render=true){const t=getTemplate(id),d=templateDefaultState(t.id);$("templateSelect").value=t.id;if(d.font&&FONTS[d.font])$("fontSelect").value=d.font;if(d.fontSize!=null)$("fontSizeInput").value=d.fontSize;if(d.tracking!=null)$("trackingInput").value=d.tracking;if(d.textX!=null)$("textXInput").value=d.textX;if(d.textY!=null)$("textYInput").value=d.textY;if(d.backStyle)$("backStyleSelect").value=d.backStyle;applyBackgroundColor(d.background??"auto");if(d.schoolName!=null)$("schoolNameInput").value=d.schoolName;if(d.trumpSuit)$("trumpSuitSelect").value=d.trumpSuit;if(d.trumpRank!=null)$("trumpRankInput").value=d.trumpRank;applyTrumpColor("suit",d.trumpSuitColor??"auto");applyTrumpColor("rank",d.trumpRankColor??"auto");if(d.signatureScale!=null)setLinked("signatureScale",d.signatureScale);if(d.signatureX!=null)setLinked("signatureX",d.signatureX);if(d.signatureY!=null)setLinked("signatureY",d.signatureY);if(d.logoOutline!=null)$("logoOutlineCheck").checked=!!d.logoOutline;if(d.logoShadow!=null)$("logoShadowCheck").checked=!!d.logoShadow;setLinked("frontLogoScale",d.frontLogoScale??100);setLinked("frontLogoX",d.frontLogoX??325);setLinked("frontLogoY",d.frontLogoY??60);setLinked("backLogoScale",d.backLogoScale??100);setLinked("backLogoX",d.backLogoX??325);setLinked("backLogoY",d.backLogoY??502);updateTemplateExtras();maybeName();syncTemplateBrowserSelected();if(render)queue()}
+function applyTemplateDefaults(id,render=true){const t=getTemplate(id),d=templateDefaultState(t.id);$("templateSelect").value=t.id;if(d.font&&FONTS[d.font])$("fontSelect").value=d.font;if(d.fontSize!=null)$("fontSizeInput").value=d.fontSize;if(d.tracking!=null)$("trackingInput").value=d.tracking;if(d.textX!=null)$("textXInput").value=d.textX;if(d.textY!=null)$("textYInput").value=d.textY;if(d.backStyle)$("backStyleSelect").value=d.backStyle;applyBackgroundColor(d.background??"auto");if(d.schoolName!=null)$("schoolNameInput").value=d.schoolName;if(d.trumpSuit)$("trumpSuitSelect").value=d.trumpSuit;if(d.trumpRank!=null)$("trumpRankInput").value=d.trumpRank;applyTrumpColor("suit",d.trumpSuitColor??"auto");applyTrumpColor("rank",d.trumpRankColor??"auto");if(d.signatureScale!=null)setLinked("signatureScale",d.signatureScale);if(d.signatureX!=null)setLinked("signatureX",d.signatureX);if(d.signatureY!=null)setLinked("signatureY",d.signatureY);if(d.logoOutline!=null)$("logoOutlineCheck").checked=!!d.logoOutline;if(d.logoShadow!=null)$("logoShadowCheck").checked=!!d.logoShadow;setLinked("frontLogoScale",d.frontLogoScale??100);setLinked("frontLogoX",d.frontLogoX??325);setLinked("frontLogoY",d.frontLogoY??60);setLinked("backLogoScale",d.backLogoScale??100);setLinked("backLogoX",d.backLogoX??325);setLinked("backLogoY",d.backLogoY??502);updateTemplateExtras();maybeName();syncTemplateBrowserSelected();refreshPresetSelect();if(render)queue()}
+function allTemplatePresets(){return loadJson(TEMPLATE_PRESETS_KEY,{})}
+function templatePresetsFor(id){const all=allTemplatePresets(),set=all[id];return set&&typeof set==="object"&&!Array.isArray(set)?set:{}}
+function templatePresetCount(id){return Object.keys(templatePresetsFor(id)).length}
+function presetStatus(msg,type=""){const e=$("presetStatus");if(!e)return;e.textContent=msg;e.className="preset-status"+(type?" "+type:"")}
+function currentStylePresetPayload(){
+  const c=ctrl();
+  return{
+    group:c.group,
+    element:c.element,text:c.text,background:c.background,
+    font:c.font,fontSize:c.fontSize,tracking:c.tracking,textX:c.textX,textY:c.textY,
+    shadow:c.shadow,stroke:c.stroke,strokeWidth:c.strokeWidth,
+    backStyle:c.backStyle,
+    frontLogoScale:c.frontLogoScale,frontLogoX:c.frontLogoX,frontLogoY:c.frontLogoY,
+    backLogoScale:c.backLogoScale,backLogoX:c.backLogoX,backLogoY:c.backLogoY,
+    logoOutline:c.logoOutline,logoShadow:c.logoShadow,
+    schoolName:c.schoolName,
+    trumpSuit:c.trumpSuit,trumpRank:c.trumpRank,trumpSuitColor:c.trumpSuitColor,trumpRankColor:c.trumpRankColor,
+    signatureScale:c.signatureScale,signatureX:c.signatureX,signatureY:c.signatureY
+  }
+}
+function presetNameMatch(presets,name,ignore=""){
+  const q=String(name||"").trim().toLocaleLowerCase("ko-KR");
+  return Object.keys(presets).find(n=>n!==ignore&&n.toLocaleLowerCase("ko-KR")===q)||null
+}
+function updatePresetActions(){
+  const s=$("presetSelect"),name=s?.value||"",has=!!name;
+  if($("overwritePresetBtn"))$("overwritePresetBtn").disabled=!has;
+  if($("renamePresetBtn"))$("renamePresetBtn").disabled=!has;
+  if($("deletePresetBtn"))$("deletePresetBtn").disabled=!has;
+}
+function refreshPresetSelect(preferred=""){
+  const s=$("presetSelect");if(!s)return;
+  const id=$("templateSelect")?.value||"ribbon",presets=templatePresetsFor(id),names=Object.keys(presets).sort((a,b)=>a.localeCompare(b,"ko-KR",{numeric:true})),old=preferred||s.value;
+  s.innerHTML=names.length?'<option value="">프리셋 선택…</option>'+names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join(""):'<option value="">저장된 프리셋 없음</option>';
+  if(old&&names.includes(old))s.value=old;
+  updatePresetActions();
+  if(!names.length)presetStatus("이 템플릿에 저장된 프리셋이 없습니다.");
+  else if(s.value)presetStatus(`“${s.value}” 선택됨 · 총 ${names.length}개`);
+  else presetStatus(`저장된 프리셋 ${names.length}개`);
+}
+function savePresetStore(id,presets){
+  const all=allTemplatePresets();
+  if(Object.keys(presets).length)all[id]=presets;else delete all[id];
+  saveJson(TEMPLATE_PRESETS_KEY,all)
+}
+function saveNewPreset(){
+  const id=$("templateSelect").value,presets=templatePresetsFor(id),name=$("presetNameInput").value.trim();
+  if(!name){presetStatus("프리셋 이름을 입력하세요.","error");$("presetNameInput").focus();return}
+  const dup=presetNameMatch(presets,name);if(dup){presetStatus(`이미 “${dup}” 프리셋이 있습니다. 덮어쓰기를 사용하세요.`,"error");return}
+  presets[name]={...currentStylePresetPayload(),_savedAt:new Date().toISOString()};
+  savePresetStore(id,presets);refreshPresetSelect(name);$("presetNameInput").value=name;templateThumbCache.clear();
+  if($("templateBrowserDialog")?.open)renderTemplateBrowser();
+  presetStatus(`“${name}” 프리셋을 저장했습니다.`,"ok")
+}
+function applySelectedPreset(){
+  const id=$("templateSelect").value,name=$("presetSelect").value,preset=templatePresetsFor(id)[name];
+  if(!name||!preset){presetStatus("적용할 프리셋을 선택하세요.","error");return}
+  const current=ctrl(),keep={name:current.name,fx:current.fx,fy:current.fy,zoom:current.zoom};
+  applyCtrl({...current,...preset,template:id,...keep});
+  $("presetSelect").value=name;$("presetNameInput").value=name;updatePresetActions();templateThumbCache.clear();
+  presetStatus(`“${name}” 프리셋을 적용했습니다.`,"ok")
+}
+function overwriteSelectedPreset(){
+  const id=$("templateSelect").value,name=$("presetSelect").value,presets=templatePresetsFor(id);
+  if(!name||!presets[name])return presetStatus("덮어쓸 프리셋을 선택하세요.","error");
+  presets[name]={...currentStylePresetPayload(),_savedAt:new Date().toISOString()};
+  savePresetStore(id,presets);templateThumbCache.clear();refreshPresetSelect(name);
+  if($("templateBrowserDialog")?.open)renderTemplateBrowser();
+  presetStatus(`“${name}”을 현재 설정으로 덮어썼습니다.`,"ok")
+}
+function renameSelectedPreset(){
+  const id=$("templateSelect").value,oldName=$("presetSelect").value,presets=templatePresetsFor(id),newName=$("presetNameInput").value.trim();
+  if(!oldName||!presets[oldName])return presetStatus("이름을 바꿀 프리셋을 선택하세요.","error");
+  if(!newName){presetStatus("새 프리셋 이름을 입력하세요.","error");$("presetNameInput").focus();return}
+  if(newName===oldName)return presetStatus("현재 이름과 같습니다.");
+  const dup=presetNameMatch(presets,newName,oldName);if(dup)return presetStatus(`이미 “${dup}” 프리셋이 있습니다.`,"error");
+  presets[newName]=presets[oldName];delete presets[oldName];presets[newName]._savedAt=new Date().toISOString();
+  savePresetStore(id,presets);refreshPresetSelect(newName);
+  if($("templateBrowserDialog")?.open)renderTemplateBrowser();
+  presetStatus(`프리셋 이름을 “${newName}”으로 변경했습니다.`,"ok")
+}
+function deleteSelectedPreset(){
+  const id=$("templateSelect").value,name=$("presetSelect").value,presets=templatePresetsFor(id);
+  if(!name||!presets[name])return presetStatus("삭제할 프리셋을 선택하세요.","error");
+  if(!confirm(`“${name}” 프리셋을 삭제할까요?`))return;
+  delete presets[name];savePresetStore(id,presets);$("presetNameInput").value="";refreshPresetSelect();templateThumbCache.clear();
+  if($("templateBrowserDialog")?.open)renderTemplateBrowser();
+  presetStatus(`“${name}” 프리셋을 삭제했습니다.`,"ok")
+}
+function onPresetSelectionChange(){
+  const name=$("presetSelect").value;updatePresetActions();
+  if(!name){$("presetNameInput").value="";refreshPresetSelect();return}
+  $("presetNameInput").value=name;applySelectedPreset()
+}
+
 function currentTemplateDefaultPayload(){const c=ctrl();return{font:c.font,fontSize:c.fontSize,tracking:c.tracking,textX:c.textX,textY:c.textY,backStyle:c.backStyle,background:c.background,frontLogoScale:c.frontLogoScale,frontLogoX:c.frontLogoX,frontLogoY:c.frontLogoY,backLogoScale:c.backLogoScale,backLogoX:c.backLogoX,backLogoY:c.backLogoY,logoOutline:c.logoOutline,logoShadow:c.logoShadow,schoolName:c.schoolName,trumpSuit:c.trumpSuit,trumpRank:c.trumpRank,trumpSuitColor:c.trumpSuitColor,trumpRankColor:c.trumpRankColor,signatureScale:c.signatureScale,signatureX:c.signatureX,signatureY:c.signatureY}}
 function saveCurrentTemplateDefaults(){const id=$("templateSelect").value,all=templateUserDefaults();all[id]=currentTemplateDefaultPayload();saveJson(TEMPLATE_DEFAULTS_KEY,all);status(getTemplate(id).label+" 기본값을 저장했습니다.",false,true)}
 function resetCurrentTemplateDefaults(){const id=$("templateSelect").value,all=templateUserDefaults();delete all[id];saveJson(TEMPLATE_DEFAULTS_KEY,all);applyTemplateDefaults(id,true);status(getTemplate(id).label+" 기본값을 초기화했습니다.",false,true)}
@@ -282,7 +378,7 @@ async function loadExcelPanel(file){if(!file)return;try{excelRows=(await parseEx
 function saveProgress(){saveJson(PROGRESS_KEY,{rows:excelRows,selectedId,sortCol,sortDesc,filters,hint:$("excelDataHint").textContent});excelStatus("진행 상태를 저장했습니다.")}
 function restoreProgress(){const p=loadJson(PROGRESS_KEY,null);if(!p?.rows?.length)return;excelRows=p.rows;selectedId=p.selectedId||null;sortCol=p.sortCol||null;sortDesc=!!p.sortDesc;filters={...Object.fromEntries(COLUMNS.map(c=>[c,""])),...(p.filters||{})};$("excelDataHint").textContent=p.hint||"저장된 작업 상태 복원";renderExcelHead();renderExcelBody();excelStatus("이전 작업 상태를 복원했습니다.")}
 
-function bind(){bindRange("focusX",0,100);bindRange("focusY",0,100);bindRange("zoom",100,500);bindRange("frontLogoScale",40,200);bindRange("frontLogoX",0,650);bindRange("frontLogoY",0,1004);bindRange("backLogoScale",40,200);bindRange("backLogoX",0,650);bindRange("backLogoY",0,1004);bindRange("signatureScale",40,220);bindRange("signatureX",0,650);bindRange("signatureY",0,1004);bindGestures();$("photoInput").onchange=e=>choosePhoto(e.target.files?.[0]);$("cutoutBtn").onclick=doCutout;$("restorePhotoBtn").onclick=restoreOriginalPhoto;$("nameInput").oninput=()=>{maybeName();queue()};$("templateSelect").onchange=()=>{const id=$("templateSelect").value;recordTemplateRecent(id);applyTemplateDefaults(id,true)};$("openTemplateBrowserBtn").onclick=openTemplateBrowser;$("closeTemplateBrowserBtn").onclick=()=>$("templateBrowserDialog").close();$("templateSearchInput").oninput=renderTemplateBrowser;$("schoolNameInput").oninput=queue;$("trumpSuitSelect").onchange=()=>{syncTrumpPicker("suit");syncTrumpPicker("rank");queue()};$("trumpRankInput").oninput=queue;$("trumpSuitColorSelect").onchange=()=>{syncTrumpPicker("suit");queue()};$("trumpRankColorSelect").onchange=()=>{syncTrumpPicker("rank");queue()};$("trumpSuitColorPicker").oninput=()=>trumpPickerToSelect("suit");$("trumpRankColorPicker").oninput=()=>trumpPickerToSelect("rank");$("signatureInput").onchange=e=>chooseSignature(e.target.files?.[0]);$("clearSignatureBtn").onclick=clearSignature;$("groupSelect").onchange=()=>{templateThumbCache.clear();queue()};$("backStyleSelect").onchange=queue;$("fontSelect").onchange=queue;$("logoOutlineCheck").onchange=queue;$("logoShadowCheck").onchange=queue;$("elementColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("element");queue()};$("textColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("text");queue()};$("backgroundColorSelect").onchange=()=>{templateThumbCache.clear();syncBackgroundPicker();queue()};$("elementColorPicker").oninput=()=>pickerToSelect("element");$("textColorPicker").oninput=()=>pickerToSelect("text");$("backgroundColorPicker").oninput=backgroundPickerToSelect;["trackingInput","fontSizeInput","textXInput","textYInput","shadowCheck","strokeColorPicker","strokeWidthInput"].forEach(id=>$(id).oninput=queue);$("resetCropBtn").onclick=()=>{setLinked("focusX",50);setLinked("focusY",50);setLinked("zoom",100);queue()};$("resetTextBtn").onclick=()=>{Object.assign($("trackingInput"),{value:4});$("fontSizeInput").value=31;$("textXInput").value=325;$("textYInput").value=903;$("shadowCheck").checked=true;$("strokeColorPicker").value="#FFFFFF";$("strokeWidthInput").value=1;queue()};$("centerGuideCheck").oninput=updateGuide;$("frontTabBtn").onclick=()=>switchSide("front");$("backTabBtn").onclick=()=>switchSide("back");$("filenameInput").oninput=()=>filenameEdited=true;$("generateBtn").onclick=saveCurrent;$("savePairBtn").onclick=savePair;$("savePathBtn").onclick=pickFolder;$("saveDefaultsBtn").onclick=saveCurrentTemplateDefaults;$("resetDefaultsBtn").onclick=resetCurrentTemplateDefaults;$("sampleExcelBtn").onclick=sampleExcel;$("excelInput").onchange=prepareBatch;$("imageFolderInput").onchange=prepareBatch;$("batchBtn").onclick=runBatch;$("excelDataLoadBtn").onclick=()=>$("excelDataInput").click();$("excelDataInput").onchange=e=>loadExcelPanel(e.target.files?.[0]);$("excelProgressSaveBtn").onclick=saveProgress;$("openColorManagerBtn").onclick=openColorManager;$("addCustomColorBtn").onclick=saveCustomColor;$("customColorPicker").oninput=e=>$("customColorHex").value=e.target.value.toUpperCase();$("customColorHex").oninput=e=>{const v=normalizeHex(e.target.value);if(v)$("customColorPicker").value=v}}
+function bind(){bindRange("focusX",0,100);bindRange("focusY",0,100);bindRange("zoom",100,500);bindRange("frontLogoScale",40,200);bindRange("frontLogoX",0,650);bindRange("frontLogoY",0,1004);bindRange("backLogoScale",40,200);bindRange("backLogoX",0,650);bindRange("backLogoY",0,1004);bindRange("signatureScale",40,220);bindRange("signatureX",0,650);bindRange("signatureY",0,1004);bindGestures();$("photoInput").onchange=e=>choosePhoto(e.target.files?.[0]);$("cutoutBtn").onclick=doCutout;$("restorePhotoBtn").onclick=restoreOriginalPhoto;$("nameInput").oninput=()=>{maybeName();queue()};$("templateSelect").onchange=()=>{const id=$("templateSelect").value;recordTemplateRecent(id);applyTemplateDefaults(id,true)};$("openTemplateBrowserBtn").onclick=openTemplateBrowser;$("closeTemplateBrowserBtn").onclick=()=>$("templateBrowserDialog").close();$("templateSearchInput").oninput=renderTemplateBrowser;$("schoolNameInput").oninput=queue;$("trumpSuitSelect").onchange=()=>{syncTrumpPicker("suit");syncTrumpPicker("rank");queue()};$("trumpRankInput").oninput=queue;$("trumpSuitColorSelect").onchange=()=>{syncTrumpPicker("suit");queue()};$("trumpRankColorSelect").onchange=()=>{syncTrumpPicker("rank");queue()};$("trumpSuitColorPicker").oninput=()=>trumpPickerToSelect("suit");$("trumpRankColorPicker").oninput=()=>trumpPickerToSelect("rank");$("signatureInput").onchange=e=>chooseSignature(e.target.files?.[0]);$("clearSignatureBtn").onclick=clearSignature;$("groupSelect").onchange=()=>{templateThumbCache.clear();queue()};$("backStyleSelect").onchange=queue;$("fontSelect").onchange=queue;$("logoOutlineCheck").onchange=queue;$("logoShadowCheck").onchange=queue;$("elementColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("element");queue()};$("textColorSelect").onchange=()=>{templateThumbCache.clear();syncPicker("text");queue()};$("backgroundColorSelect").onchange=()=>{templateThumbCache.clear();syncBackgroundPicker();queue()};$("elementColorPicker").oninput=()=>pickerToSelect("element");$("textColorPicker").oninput=()=>pickerToSelect("text");$("backgroundColorPicker").oninput=backgroundPickerToSelect;["trackingInput","fontSizeInput","textXInput","textYInput","shadowCheck","strokeColorPicker","strokeWidthInput"].forEach(id=>$(id).oninput=queue);$("resetCropBtn").onclick=()=>{setLinked("focusX",50);setLinked("focusY",50);setLinked("zoom",100);queue()};$("resetTextBtn").onclick=()=>{Object.assign($("trackingInput"),{value:4});$("fontSizeInput").value=31;$("textXInput").value=325;$("textYInput").value=903;$("shadowCheck").checked=true;$("strokeColorPicker").value="#FFFFFF";$("strokeWidthInput").value=1;queue()};$("centerGuideCheck").oninput=updateGuide;$("frontTabBtn").onclick=()=>switchSide("front");$("backTabBtn").onclick=()=>switchSide("back");$("filenameInput").oninput=()=>filenameEdited=true;$("generateBtn").onclick=saveCurrent;$("savePairBtn").onclick=savePair;$("savePathBtn").onclick=pickFolder;$("presetSelect").onchange=onPresetSelectionChange;$("applyPresetBtn").onclick=applySelectedPreset;$("savePresetBtn").onclick=saveNewPreset;$("overwritePresetBtn").onclick=overwriteSelectedPreset;$("renamePresetBtn").onclick=renameSelectedPreset;$("deletePresetBtn").onclick=deleteSelectedPreset;$("presetNameInput").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();saveNewPreset()}};$("saveDefaultsBtn").onclick=saveCurrentTemplateDefaults;$("resetDefaultsBtn").onclick=resetCurrentTemplateDefaults;$("sampleExcelBtn").onclick=sampleExcel;$("excelInput").onchange=prepareBatch;$("imageFolderInput").onchange=prepareBatch;$("batchBtn").onclick=runBatch;$("excelDataLoadBtn").onclick=()=>$("excelDataInput").click();$("excelDataInput").onchange=e=>loadExcelPanel(e.target.files?.[0]);$("excelProgressSaveBtn").onclick=saveProgress;$("openColorManagerBtn").onclick=openColorManager;$("addCustomColorBtn").onclick=saveCustomColor;$("customColorPicker").oninput=e=>$("customColorHex").value=e.target.value.toUpperCase();$("customColorHex").oninput=e=>{const v=normalizeHex(e.target.value);if(v)$("customColorPicker").value=v}}
 async function registerModelCacheWorker(){if(!("serviceWorker" in navigator))return;try{await navigator.serviceWorker.register("./service-worker.js",{scope:"./"});await navigator.serviceWorker.ready}catch(e){console.warn("모델 캐시 서비스 워커 등록 실패:",e)}}
 async function init(){registerModelCacheWorker();initFonts();initTemplates();$("fontSelect").value="Playfair Display";$("logoOutlineCheck").checked=true;$("logoShadowCheck").checked=true;initColors();initGroups();updateTemplateExtras();bind();renderExcelHead();renderExcelBody();restoreProgress();const saved=loadJson(STORAGE_KEY,null);applyTemplateDefaults("ribbon",false);if(saved?.name)$("nameInput").value=saved.name;maybeName(true);saveDir=await loadHandle();pathText();switchSide("front");status("준비 완료. 사진을 선택하세요.",false,true);loadAsset(GROUPS.IVE.logo).catch(()=>{})}
 init();
