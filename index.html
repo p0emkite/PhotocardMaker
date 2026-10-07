@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Allura&family=Bebas+Neue&family=Bodoni+Moda:wght@400;600&family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@400;600&family=DM+Serif+Display&family=Dancing+Script:wght@400;600&family=Great+Vibes&family=Inter:wght@400;600&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;600&family=Montserrat:wght@400;600&family=Oswald:wght@400;600&family=Pacifico&family=Playfair+Display:wght@400;600&family=Poppins:wght@400;600&family=Quicksand:wght@400;600&family=Raleway:wght@400;600&family=Sacramento&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles.css?v=1">
-<link rel="stylesheet" href="./v2.css?v=5">
+<link rel="stylesheet" href="./v2.css?v=6">
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
@@ -27,8 +27,12 @@
 
         <div class="field full">
           <label for="photoInput">사진</label>
-          <input id="photoInput" type="file" accept="image/png,image/jpeg,image/webp">
-          <small>누끼 없이 원본 사진을 카드 비율에 맞춰 채웁니다.</small>
+          <div class="file-row">
+            <input id="photoInput" type="file" accept="image/png,image/jpeg,image/webp">
+            <button id="cutoutBtn" class="secondary" type="button" disabled>AI 누끼</button>
+            <button id="restorePhotoBtn" class="ghost" type="button" disabled>원본 복원</button>
+          </div>
+          <small>기본은 원본 사진을 사용합니다. AI 누끼는 츠키카드와 동일하게 WebGPU 우선 처리하며, 최초 실행 시 모델을 내려받습니다.</small>
         </div>
 
         <div class="grid2">
@@ -51,7 +55,12 @@
           <div id="signatureImageField" class="field template-extra" hidden>
             <label for="signatureInput">사인 이미지</label>
             <input id="signatureInput" type="file" accept="image/png,image/jpeg,image/webp">
-            <small>Signature 템플릿에서만 사용됩니다. 투명 배경 PNG를 권장합니다.</small>
+            <small>Signature 템플릿에서만 사용됩니다. 투명 배경 PNG를 권장하며, 검정 외곽선과 그림자가 자동 적용됩니다.</small>
+            <div class="signature-controls">
+              <div class="range-row"><label>크기</label><input id="signatureScaleRange" type="range" min="40" max="220" value="100"><input id="signatureScaleNumber" type="number" min="40" max="220" value="100"></div>
+              <div class="range-row"><label>가로 위치</label><input id="signatureXRange" type="range" min="0" max="650" value="363"><input id="signatureXNumber" type="number" min="0" max="650" value="363"></div>
+              <div class="range-row"><label>세로 위치</label><input id="signatureYRange" type="range" min="0" max="1004" value="862"><input id="signatureYNumber" type="number" min="0" max="1004" value="862"></div>
+            </div>
             <button id="clearSignatureBtn" class="ghost" type="button">사인 이미지 제거</button>
           </div>
           <div id="trumpOptionsField" class="template-extra" hidden>
@@ -243,6 +252,6 @@
 </dialog>
 
 <footer>렌더링은 사용자 브라우저 안에서 실행됩니다. 사진은 서버로 업로드하지 않습니다.</footer>
-<script type="module" src="./app-v2.js?v=8"></script>
+<script type="module" src="./app-v2.js?v=9"></script>
 </body>
 </html>
