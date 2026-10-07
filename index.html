@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="./v2.css?v=11">
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 </head>
 <body>
 <header class="topbar">
@@ -267,6 +268,8 @@
       <div><h2>불러온 엑셀 데이터</h2><p id="excelDataHint">엑셀을 불러오면 행을 클릭해 설정을 적용할 수 있습니다.</p></div>
       <div class="excel-data-actions">
         <button id="excelTemplateDownloadBtn" class="secondary" type="button">엑셀 양식 다운로드</button>
+        <button id="excelImageFolderBtn" class="ghost" type="button">이미지 폴더 연결</button>
+        <input id="excelImageFolderInput" type="file" accept="image/*" multiple webkitdirectory directory hidden>
         <button id="excelProgressSaveBtn" class="ghost" type="button">진행 상태 저장</button>
         <button id="excelDataLoadBtn" class="secondary" type="button">엑셀 데이터 불러오기</button>
         <input id="excelDataInput" type="file" accept=".xlsx,.xls" hidden>
@@ -317,6 +320,6 @@
 </dialog>
 
 <footer>렌더링은 사용자 브라우저 안에서 실행됩니다. 사진은 서버로 업로드하지 않습니다.</footer>
-<script type="module" src="./app-v2.js?v=20"></script>
+<script type="module" src="./app-v2.js?v=21"></script>
 </body>
 </html>
