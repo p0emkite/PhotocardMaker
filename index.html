@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Allura&family=Bebas+Neue&family=Bodoni+Moda:wght@400;600&family=Bungee&family=Caveat:wght@400;600&family=Cinzel:wght@400;600&family=Cormorant+Garamond:wght@400;600&family=DM+Serif+Display&family=Dancing+Script:wght@400;600&family=Great+Vibes&family=Inter:wght@400;600&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;600&family=Montserrat:wght@400;600&family=Orbitron:wght@400;600&family=Oswald:wght@400;600&family=Pacifico&family=Parisienne&family=Playfair+Display:wght@400;600&family=Poppins:wght@400;600&family=Prata&family=Press+Start+2P&family=Quicksand:wght@400;600&family=Raleway:wght@400;600&family=Righteous&family=Sacramento&family=Satisfy&family=Space+Grotesk:wght@400;600&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles.css?v=1">
-<link rel="stylesheet" href="./v2.css?v=10">
+<link rel="stylesheet" href="./v2.css?v=11">
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
@@ -180,10 +180,31 @@
           </div>
         </details>
 
+        <details open>
+          <summary>스타일 프리셋</summary>
+          <div class="details-body preset-details">
+            <p class="defaults-note">현재 템플릿에 여러 디자인 설정을 이름 붙여 저장합니다. 사진·이름·크롭·저장 파일명은 바뀌지 않습니다.</p>
+            <div class="preset-picker-row">
+              <select id="presetSelect"><option value="">저장된 프리셋 없음</option></select>
+              <button id="applyPresetBtn" class="secondary" type="button">적용</button>
+            </div>
+            <div class="preset-save-row">
+              <input id="presetNameInput" type="text" maxlength="40" placeholder="예: IVE 핑크 / 골드 ver. / 다크 ver.">
+              <button id="savePresetBtn" class="primary" type="button">새 프리셋 저장</button>
+            </div>
+            <div class="preset-actions">
+              <button id="overwritePresetBtn" class="secondary" type="button" disabled>현재 설정으로 덮어쓰기</button>
+              <button id="renamePresetBtn" class="ghost" type="button" disabled>이름 변경</button>
+              <button id="deletePresetBtn" class="ghost danger-ghost" type="button" disabled>삭제</button>
+            </div>
+            <div id="presetStatus" class="preset-status">이 템플릿에 저장된 프리셋이 없습니다.</div>
+          </div>
+        </details>
+
         <details>
           <summary>템플릿 기본값</summary>
           <div class="details-body">
-            <p class="defaults-note">현재 템플릿의 폰트·이름 위치·로고 크기/위치·뒷면 스타일 등을 이 브라우저에 저장합니다.</p>
+            <p class="defaults-note">프리셋과 별개로, 템플릿을 선택했을 때 처음 불러올 기본 설정 한 벌을 저장합니다.</p>
             <div class="button-row">
               <button id="saveDefaultsBtn" class="secondary" type="button">현재 템플릿 기본값으로 저장</button>
               <button id="resetDefaultsBtn" class="ghost" type="button">현재 템플릿 기본값 초기화</button>
@@ -290,6 +311,6 @@
 </dialog>
 
 <footer>렌더링은 사용자 브라우저 안에서 실행됩니다. 사진은 서버로 업로드하지 않습니다.</footer>
-<script type="module" src="./app-v2.js?v=17"></script>
+<script type="module" src="./app-v2.js?v=18"></script>
 </body>
 </html>
