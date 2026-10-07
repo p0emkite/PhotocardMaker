@@ -1,0 +1,28 @@
+name: Template QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "templates.js"
+      - "qa-static.mjs"
+      - "package.json"
+      - ".github/workflows/template-qa.yml"
+  pull_request:
+    paths:
+      - "templates.js"
+      - "qa-static.mjs"
+      - "package.json"
+
+jobs:
+  template-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run template registry and renderer smoke tests
+        run: npm test
