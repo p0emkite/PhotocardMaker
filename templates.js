@@ -276,6 +276,42 @@ export const TEMPLATE_REGISTRY={
   }
 };
 
+// Audited name-safe regions (centre x/y, width/height, optional rotation).
+// Plate regions include padding; free-standing names avoid captions, logos and trim.
+export const NAME_AREAS={
+  ribbon:[325,903,380,40], y2k:[325,900,520,90], polaroid:[365,887,390,100],
+  film:[325,907,430,32], magazine:[325,106,570,64], luxury:[325,898,430,64],
+  princess:[325,902,450,74], gothic:[325,910,460,64], angel:[325,898,460,80],
+  cyber:[325,907,430,58], arcade:[325,878,480,64], minimal:[150,922,212,48],
+  editorial:[499,854,230,92], split:[122,862,150,60], gradient_glow:[325,899,430,66],
+  neon:[325,897,445,74], scrapbook:[325,882,430,60], diary:[342,855,430,34],
+  love_letter:[325,860,380,64], student_id:[325,756,500,130], concert_ticket:[393,902,335,64],
+  album_tracklist:[325,840,470,52], starry_night:[325,902,450,84], butterfly:[325,900,450,80],
+  cherry_strawberry:[325,904,440,64], cat_puppy:[325,898,410,72], bubble_pop:[325,892,420,72],
+  glass_acrylic:[325,896,420,52], chrome:[325,888,430,76], racing:[363,819,390,62,-Math.atan(100/470)],
+  varsity:[325,889,430,74], sailor:[325,896,334,68], christmas:[325,891,420,74],
+  halloween:[325,888,430,72], sakura:[325,892,414,72], summer_soda:[325,890,420,72],
+  signature:[126,942,170,48], trump:[325,910,430,60], dressing_mirror:[325,920,380,80],
+  candy_pop:[325,891,350,64], teddy_bear:[325,895,414,66], rising_star:[325,893,430,74],
+  japan_traditional:[325,894,394,64], fireworks:[325,895,410,66], gyaru:[325,893,400,70],
+  city_pop:[325,896,405,64], mathilda:[325,904,298,48]
+};
+export const NAME_LAYOUT_VERSION=2;
+for(const t of Object.values(TEMPLATE_REGISTRY)){
+  const [x,y,width,height,angle=0]=NAME_AREAS[t.id];
+  t.legacyNamePosition={textX:t.defaults.textX,textY:t.defaults.textY};
+  t.nameArea={x,y,width,height,angle};
+  Object.assign(t.defaults,{textX:x,textY:y,nameLayoutVersion:NAME_LAYOUT_VERSION})
+}
+// Upgrade old stock positions only. User-moved coordinates and all other settings survive.
+export function migrateNamePosition(id,saved={}){
+  const t=getTemplate(id),out={...saved};
+  if((Number(saved.nameLayoutVersion)||0)<NAME_LAYOUT_VERSION){
+    for(const key of ["textX","textY"])if(out[key]!=null&&Number(out[key])===t.legacyNamePosition[key])out[key]=t.defaults[key]
+  }
+  out.nameLayoutVersion=NAME_LAYOUT_VERSION;return out
+}
+
 export function getTemplate(id){return TEMPLATE_REGISTRY[id]||TEMPLATE_REGISTRY.ribbon}
 export function getTemplateList(){return Object.values(TEMPLATE_REGISTRY).sort((a,b)=>(parseInt(a.label)||999)-(parseInt(b.label)||999))}
 
@@ -375,7 +411,7 @@ async function backRibbon(e){e.backBase(lighten(e.c.element,.93));await e.backLo
 
 function filmSprockets(ctx,W,H,color="#F4EEE2"){
   ctx.save();ctx.fillStyle=color;
-  for(let y=72;y<H-60;y+=76){ctx.roundRect(16,y,28,44,5);ctx.fill();ctx.beginPath();ctx.roundRect(W-44,y,28,44,5);ctx.fill()}
+  for(let y=72;y<H-60;y+=76){ctx.beginPath();ctx.roundRect(16,y,28,44,5);ctx.fill();ctx.beginPath();ctx.roundRect(W-44,y,28,44,5);ctx.fill()}
   ctx.restore()
 }
 function pearlBorder(ctx,W,H,color){
@@ -1090,6 +1126,10 @@ function peppermintCandy(ctx,x,y,s,color1="#FF4F63",color2="#FFFFFF",angle=0){
   ctx.restore()
 }
 function candyFrameDense(ctx,W,H,c){
+  ctx.save();ctx.beginPath();ctx.roundRect(0,0,W,H,28);ctx.clip();
+  const band=ctx.createLinearGradient(0,0,W,H);
+  band.addColorStop(0,"#FFF2FA");band.addColorStop(.5,lighten(c.element,.86));band.addColorStop(1,"#E9F5FF");
+  ctx.fillStyle=band;ctx.beginPath();ctx.roundRect(0,0,W,H,28);ctx.roundRect(94,106,W-188,H-212,22);ctx.fill("evenodd");
   const palette=[c.element,"#FF4F72","#FFAA2E","#28C96B","#38A8FF","#8D62E8","#F44336","#FFE33D","#29D3C3"];
   const topY=[34,62,88],bottomY=[H-34,H-62,H-88];
   let k=0;
@@ -1106,7 +1146,7 @@ function candyFrameDense(ctx,W,H,c){
     [50,260,29,"#F23858",.10],[W-48,390,28,"#E73448",-.10],[50,H-290,30,"#FF4F63",.08],[W-50,H-205,28,"#F23858",-.08]
   ])peppermintCandy(ctx,x,y,s,col,"#FFFFFF",a);
   wrappedCandy(ctx,180,73,23,"#F04D62",-.12);wrappedCandy(ctx,W-190,H-73,24,"#2FCB77",.12);
-  candyLollipop(ctx,88,136,40,"#FF4F9A","#FFFFFF",-.25);candyLollipop(ctx,W-88,H-150,39,"#4F9CFF","#FFFFFF",.24)
+  candyLollipop(ctx,88,136,40,"#FF4F9A","#FFFFFF",-.25);candyLollipop(ctx,W-88,H-150,39,"#4F9CFF","#FFFFFF",.24);ctx.restore()
 }
 
 function teddyFace(ctx,x,y,s,brown="#A36F49",cream="#F4DEC5",angle=0){

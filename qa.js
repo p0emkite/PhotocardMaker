@@ -1,4 +1,5 @@
-import { getTemplateList, renderTemplateFront, renderTemplateBack } from "./templates.js?v=13";
+import {drawNameText} from "./name-text.js?v=1";
+import { getTemplateList, renderTemplateFront, renderTemplateBack, FONT_MAP } from "./templates.js?v=14";
 
 const W=650,H=1004,R=28;
 const $=id=>document.getElementById(id);
@@ -9,17 +10,6 @@ function drawCoverRect(ctx,img,c,rx,ry,rw,rh){
   const z=Math.max(1,(c.zoom||100)/100),scale=Math.max(rw/img.width,rh/img.height)*z,dw=img.width*scale,dh=img.height*scale;
   const x=rx-(dw-rw)*Math.max(0,Math.min(1,(c.fx||50)/100)),y=ry-(dh-rh)*Math.max(0,Math.min(1,(c.fy||50)/100));
   ctx.drawImage(img,x,y,dw,dh)
-}
-function trackedWidth(ctx,t,sp){return [...t].reduce((a,ch,i)=>a+ctx.measureText(ch).width+(i<t.length-1?sp:0),0)}
-function drawNameAt(ctx,c,{x=c.textX,y=c.textY,maxWidth=420,size=c.fontSize,font=c.font,fill=c.text,stroke="#fff",shadow=true,align="center"}={}){
-  const text=String(c.name||"QA SAMPLE");ctx.save();let fs=size,sp=c.tracking??0;
-  ctx.font=`600 ${fs}px "${font}", sans-serif`;
-  while(fs>16&&trackedWidth(ctx,text,sp)>maxWidth){fs--;ctx.font=`600 ${fs}px "${font}", sans-serif`}
-  ctx.textBaseline="middle";const width=trackedWidth(ctx,text,sp);let px=align==="left"?x:align==="right"?x-width:x-width/2;
-  if(shadow){ctx.shadowColor="rgba(0,0,0,.36)";ctx.shadowBlur=4;ctx.shadowOffsetY=2}
-  ctx.fillStyle=fill;ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.lineJoin="round";
-  for(let i=0;i<text.length;i++){const ch=text[i];ctx.strokeText(ch,px,y);ctx.fillText(ch,px,y);px+=ctx.measureText(ch).width+(i<text.length-1?sp:0)}
-  ctx.restore()
 }
 function makePhoto(){
   const c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");
@@ -41,7 +31,7 @@ function drawLogo(ctx,c,{cx=W/2,cy=60,w=92,effects=true,alpha=1,angle=0}={}){
   ctx.drawImage(logo,-dw/2,-dh/2,dw,dh);ctx.restore()
 }
 function makeEnv(ctx,t){
-  const c={name:"QA SAMPLE",schoolName:"QA HIGH SCHOOL",trumpSuit:"heart",trumpRank:"A",trumpSuitColor:"auto",trumpRankColor:"auto",element:"#D7A4C5",text:"#FFF3D6",background:"auto",stroke:"#FFFFFF",strokeWidth:1,shadow:true,logoOutline:true,logoShadow:true,fx:50,fy:50,zoom:100,...t.defaults};
+  const c={template:t.id,name:"wonyoung",schoolName:"QA HIGH SCHOOL",trumpSuit:"heart",trumpRank:"A",trumpSuitColor:"auto",trumpRankColor:"auto",element:"#D7A4C5",text:"#FFF3D6",background:"auto",stroke:"#FFFFFF",strokeWidth:1,shadow:true,logoOutline:true,logoShadow:true,fx:50,fy:50,zoom:100,...t.defaults};
   return {
     ctx,W,H,R,c,signatureImage:null,
     fillRound:(x,y,w,h,r,color)=>fillRound(ctx,x,y,w,h,r,(x===0&&y===0&&w===W&&h===H&&c.background!=="auto")?c.background:color),
@@ -51,7 +41,7 @@ function makeEnv(ctx,t){
     ribbonFrame:(back=false)=>{ctx.save();ctx.strokeStyle=c.element;ctx.lineWidth=8;rounded(ctx,16,16,W-32,H-32,24);ctx.stroke();ctx.restore()},
     logo:async(opts={})=>drawLogo(ctx,c,{cx:c.frontLogoX??W/2,cy:c.frontLogoY??60,w:92*(c.frontLogoScale||100)/100,effects:true,...opts}),
     backLogo:async({maxWidth=330,cx=c.backLogoX??W/2,cy=c.backLogoY??H/2}={})=>drawLogo(ctx,c,{cx,cy,w:maxWidth*(c.backLogoScale||100)/100,effects:true}),
-    name:(opts={})=>drawNameAt(ctx,c,opts),
+    name:(opts={})=>drawNameText(ctx,c,{...opts,family:FONT_MAP[opts.font||c.font],maxWidth:Math.min(opts.maxWidth??380,t.nameArea.width),maxHeight:t.nameArea.height,angle:t.nameArea.angle}),
     backBase:(color="#fff")=>fillRound(ctx,0,0,W,H,R,c.background!=="auto"?c.background:color),
     signature() {}
   }
@@ -72,7 +62,9 @@ async function renderOne(t,side){
 }
 async function run(){
   const grid=$("grid"),summary=$("summary");grid.innerHTML="";summary.innerHTML='<span class="pill">검사 중…</span>';
-  const templates=getTemplateList();let ok=0,failed=0;
+  const templates=getTemplateList();
+  await Promise.all(templates.map(t=>document.fonts.load(`400 ${t.defaults.fontSize}px "${t.defaults.font}"`)));
+  let ok=0,failed=0;
   for(const t of templates){
     const card=document.createElement("div");card.className="card";const title=document.createElement("div");title.className="title";title.textContent=t.label;card.appendChild(title);
     const wrap=document.createElement("div");wrap.className="canvases";const errors=[];

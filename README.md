@@ -154,3 +154,12 @@ Custom group logos can optionally be committed directly to this repository from 
 - 기본 이름 폰트 Oswald, 36px, 자간 4. 얼굴과 단발머리 영역에는 장식을 겹치지 않음.
 - 고정 모티프 색상: 카키/검정/테라코타. 요소 컬러는 구분선, 텍스트 컬러는 이름에 적용. 배경 컬러는 기존 컨트롤로 변경 가능.
 - Asset Lock: 외부 이미지 없이 결정론적 벡터 도형 사용. 미리보기·PNG·일괄 생성은 같은 렌더러 사용.
+
+
+## 이름 배치 및 Candy Pop 개선 (2026-10-08)
+
+현재 등록된 전체 47개 템플릿의 이름 영역을 검토했습니다. 이름은 폰트의 em-box 대신 실제 글자 외곽 경계로 중심 정렬하며, 네임플레이트 높이와 폭 안에 맞춥니다. 템플릿별 좌표·여백·레이싱 회전값은 `templates.js`의 `NAME_AREAS`, 공통 렌더러는 `name-text.js`에서 관리합니다.
+
+Candy Pop은 네 변 전체에 불투명 파스텔 배경 띠를 추가했습니다. 이름 초기화는 현재 템플릿의 좌표를 복원합니다. 저장된 예전 기본 좌표는 자동 보정하지만, 직접 조정한 위치는 유지합니다.
+
+전체 검토표: [NAME_LAYOUT_AUDIT.md](NAME_LAYOUT_AUDIT.md)

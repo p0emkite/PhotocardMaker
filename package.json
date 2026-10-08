@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node qa-static.mjs",
-    "qa": "node qa-static.mjs"
+    "test": "node qa-static.mjs && node qa-name-text.mjs",
+    "qa": "node qa-static.mjs && node qa-name-text.mjs"
   }
 }

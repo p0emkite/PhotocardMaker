@@ -6,12 +6,16 @@ on:
     paths:
       - "templates.js"
       - "qa-static.mjs"
+      - "qa-name-text.mjs"
+      - "name-text.js"
       - "package.json"
       - ".github/workflows/template-qa.yml"
   pull_request:
     paths:
       - "templates.js"
       - "qa-static.mjs"
+      - "qa-name-text.mjs"
+      - "name-text.js"
       - "package.json"
 
 jobs:
