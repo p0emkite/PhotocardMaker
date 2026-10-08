@@ -1,4 +1,4 @@
-import {FONT_REGISTRY,FONT_MAP,TEMPLATE_REGISTRY,getTemplate,getTemplateList,renderTemplateFront,renderTemplateBack} from "./templates.js?v=12";
+import {FONT_REGISTRY,FONT_MAP,TEMPLATE_REGISTRY,getTemplate,getTemplateList,renderTemplateFront,renderTemplateBack} from "./templates.js?v=13";
 const $=id=>document.getElementById(id);
 const W=650,H=1004,R=38;
 const STORAGE_KEY="photocard-maker-v2-defaults";

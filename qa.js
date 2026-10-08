@@ -1,4 +1,4 @@
-import { getTemplateList, renderTemplateFront, renderTemplateBack } from "./templates.js?v=12";
+import { getTemplateList, renderTemplateFront, renderTemplateBack } from "./templates.js?v=13";
 
 const W=650,H=1004,R=28;
 const $=id=>document.getElementById(id);

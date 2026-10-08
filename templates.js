@@ -264,6 +264,11 @@ export const TEMPLATE_REGISTRY={
     defaults:common({font:"Righteous",fontSize:39,tracking:2,textX:325,textY:906,frontLogoX:325,frontLogoY:72,frontLogoScale:66,backLogoScale:96}),
     extras:[],front:"city_pop",back:"city_pop"
   },
+  mathilda:{
+    id:"mathilda",label:"49. 마틸다 / Mathilda",category:"photo",
+    defaults:common({font:"Oswald",fontSize:36,tracking:4,textX:325,textY:905,frontLogoX:325,frontLogoY:51,frontLogoScale:72,backLogoX:325,backLogoY:446,backLogoScale:96}),
+    extras:[],front:"mathilda",back:"mathilda"
+  },
   signature:{
     id:"signature",label:"39. Signature",category:"special",
     defaults:common({font:"Sacramento",fontSize:30,tracking:1,textX:115,textY:942,frontLogoX:576,frontLogoY:67,frontLogoScale:78,signatureScale:100,signatureX:363,signatureY:862}),
@@ -1280,6 +1285,73 @@ async function backCityPop(e){
   e.fillRound(W/2-154,H/2-86,308,172,20,"rgba(18,23,54,.78)");await e.backLogo({maxWidth:224})
 }
 
+// MATHILDA_V1 — fixed 650 × 1004 layout. Keep the portrait window clear.
+const MATHILDA={khaki:"#596247",dark:"#292F25",thread:"#C5C8A7",paper:"#EEE9D9",ink:"#171A17"};
+function mathildaStitch(ctx,x,y,w,h,r=8){
+  ctx.save();ctx.setLineDash([4,5]);strokeRound(ctx,x,y,w,h,r,MATHILDA.thread,1);ctx.restore()
+}
+function mathildaPlant(ctx,x,y,scale=1){
+  ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
+  // Broad, veined leaves recall the potted aglaonema; all geometry is deterministic.
+  for(const [dx,dy,a,s] of [[-25,-54,-.8,1],[25,-68,.7,1.1],[-16,-85,-.4,.95],[14,-104,.35,1],[-36,-30,-1,.8],[33,-35,.9,.9]]){
+    line(ctx,0,0,dx,dy,"#657653",2.4);ctx.save();ctx.translate(dx,dy);ctx.rotate(a);
+    ctx.fillStyle="#435B3D";ctx.strokeStyle="#263D2D";ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(0,19);ctx.bezierCurveTo(-24,5,-19,-24,0,-39);ctx.bezierCurveTo(19,-17,23,7,0,19);ctx.fill();ctx.stroke();
+    line(ctx,0,16,0,-32,"#AFBD87",1.4);for(let i=0;i<3;i++){line(ctx,0,4-i*10,-10,-4-i*10,"#8A9F70",1);line(ctx,0,4-i*10,10,-4-i*10,"#8A9F70",1)}ctx.restore()
+  }
+  ctx.fillStyle="#AB7756";ctx.beginPath();ctx.moveTo(-32,-5);ctx.lineTo(32,-5);ctx.lineTo(25,46);ctx.lineTo(-25,46);ctx.closePath();ctx.fill();
+  ctx.fillStyle="#C29370";ctx.beginPath();ctx.roundRect(-36,-8,72,13,3);ctx.fill();line(ctx,-22,10,-18,36,"#D1A889",3);ctx.restore()
+}
+function mathildaGlasses(ctx,x,y,scale=1,angle=-.13){
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.scale(scale,scale);ctx.strokeStyle=MATHILDA.ink;ctx.lineWidth=7;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(-64,-10);ctx.lineTo(-52,-4);ctx.moveTo(52,-4);ctx.lineTo(64,-10);ctx.moveTo(-12,-5);ctx.quadraticCurveTo(0,-14,12,-5);ctx.stroke();
+  for(const cx of [-33,33]){ctx.fillStyle="#111512";ctx.beginPath();ctx.ellipse(cx,0,24,22,0,0,Math.PI*2);ctx.fill();ctx.stroke();line(ctx,cx-11,-9,cx+4,-14,"#727970",2)}ctx.restore()
+}
+function mathildaBomber(ctx,x,y,scale=1){
+  ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);ctx.fillStyle=MATHILDA.khaki;ctx.strokeStyle=MATHILDA.dark;ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(-22,-48);ctx.lineTo(-47,-38);ctx.lineTo(-72,22);ctx.lineTo(-48,33);ctx.lineTo(-34,0);ctx.lineTo(-34,61);ctx.quadraticCurveTo(0,70,34,61);ctx.lineTo(34,0);ctx.lineTo(48,33);ctx.lineTo(72,22);ctx.lineTo(47,-38);ctx.lineTo(22,-48);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle="#B67746";ctx.beginPath();ctx.moveTo(-18,-43);ctx.lineTo(0,-18);ctx.lineTo(18,-43);ctx.closePath();ctx.fill();
+  line(ctx,-22,-46,0,-20,MATHILDA.dark,7);line(ctx,22,-46,0,-20,MATHILDA.dark,7);line(ctx,0,-17,0,61,"#CDC8AA",2.5);
+  line(ctx,-27,57,27,57,MATHILDA.dark,9);line(ctx,-28,22,-12,14,MATHILDA.dark,3);line(ctx,12,14,28,22,MATHILDA.dark,3);
+  line(ctx,-52,-13,-45,-10,"#D5B68C",3);ctx.restore()
+}
+function mathildaFrame(e){
+  const {ctx,W,H}=e;
+  strokeRound(ctx,12,12,W-24,H-24,20,MATHILDA.dark,2);mathildaStitch(ctx,19,19,W-38,H-38,16);
+  // Four small corner rivets stay outside the photo and text areas.
+  for(const [x,y] of [[34,34],[W-34,34],[34,H-34],[W-34,H-34]]){
+    ctx.save();ctx.fillStyle=MATHILDA.thread;ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();ctx.restore()
+  }
+}
+async function frontMathilda(e){
+  const {ctx,W,H,c}=e;e.fillRound(0,0,W,H,e.R,MATHILDA.khaki);
+  e.photoRect(30,82,W-60,754,10);strokeRound(ctx,29,81,W-58,756,11,MATHILDA.dark,2);
+  mathildaFrame(e);
+  centeredText(ctx,"MATHILDA",99,52,'500 12px "Oswald",sans-serif',MATHILDA.paper,2);
+  centeredText(ctx,"PORTRAIT / 01",W-103,52,'500 10px "Oswald",sans-serif',MATHILDA.paper,1.5);
+  // Ornaments occupy the bottom corners, away from the bob haircut and face.
+  mathildaPlant(ctx,91,909,.85);mathildaGlasses(ctx,W-91,873,.77);
+  e.fillRound(158,865,W-316,78,5,MATHILDA.dark);mathildaStitch(ctx,165,872,W-330,64,3);
+  line(ctx,190,852,W-190,852,rgba(c.element,.7),2);
+  centeredText(ctx,"BOTANICAL / CINEMA CLUB",W/2,971,'500 10px "Oswald",sans-serif',MATHILDA.paper,2.5);
+  await e.logo({w:92,effects:true});e.name({maxWidth:298,fill:c.text,stroke:MATHILDA.dark,shadow:false})
+}
+async function backMathilda(e){
+  const {ctx,W,H,c}=e;e.backBase(MATHILDA.khaki);mathildaFrame(e);
+  // Fine diagonal twill lines add a flight-jacket texture without random noise.
+  ctx.save();ctx.beginPath();ctx.roundRect(27,27,W-54,H-54,12);ctx.clip();
+  for(let y=-W;y<H;y+=12)line(ctx,27,y,W-27,y+W,"rgba(225,231,202,.055)",1);ctx.restore();
+  centeredText(ctx,"MATHILDA",W/2,137,'500 46px "Oswald",sans-serif',MATHILDA.paper,7);
+  centeredText(ctx,"BOTANICAL / CINEMA CLUB",W/2,180,'500 11px "Oswald",sans-serif',MATHILDA.thread,2.6);
+  mathildaGlasses(ctx,W/2,270,1.15,0);
+  e.fillRound(126,366,W-252,160,8,MATHILDA.dark);mathildaStitch(ctx,136,376,W-272,140,5);
+  line(ctx,210,551,W-210,551,rgba(c.element,.7),2);
+  mathildaPlant(ctx,230,771,1.13);mathildaBomber(ctx,423,744,1.02);
+  line(ctx,108,853,W-108,853,MATHILDA.thread,1);
+  centeredText(ctx,"PORTRAIT COLLECTION",W/2,900,'500 14px "Oswald",sans-serif',MATHILDA.paper,3);
+  centeredText(ctx,"EST. 1994",W/2,935,'500 11px "Oswald",sans-serif',MATHILDA.thread,2);
+  await e.backLogo({maxWidth:245})
+}
+
 const FRONT_RENDERERS={
   ribbon:frontRibbon,y2k:frontY2K,polaroid:frontPolaroid,film:frontFilm,magazine:frontMagazine,
   luxury:frontLuxury,princess:frontPrincess,gothic:frontGothic,angel:frontAngel,cyber:frontCyber,arcade:frontArcade,
@@ -1288,7 +1360,7 @@ const FRONT_RENDERERS={
   student_id:frontStudentId,concert_ticket:frontConcertTicket,album_tracklist:frontAlbumTracklist,starry_night:frontStarryNight,butterfly:frontButterfly,cherry_strawberry:frontCherryStrawberry,
   cat_puppy:frontCatPuppy,bubble_pop:frontBubblePop,glass_acrylic:frontGlassAcrylic,chrome:frontChrome,racing:frontRacing,varsity:frontVarsity,sailor:frontSailor,christmas:frontChristmas,halloween:frontHalloween,sakura:frontSakura,summer_soda:frontSummerSoda,
   trump:frontTrump,dressing_mirror:frontDressingMirror,signature:frontSignature,
-  candy_pop:frontCandyPop,teddy_bear:frontTeddyBear,rising_star:frontRisingStar,japan_traditional:frontJapanTraditional,fireworks:frontFireworks,gyaru:frontGyaru,city_pop:frontCityPop
+  candy_pop:frontCandyPop,teddy_bear:frontTeddyBear,rising_star:frontRisingStar,japan_traditional:frontJapanTraditional,fireworks:frontFireworks,gyaru:frontGyaru,city_pop:frontCityPop,mathilda:frontMathilda
 };
 const BACK_RENDERERS={
   ribbon:backRibbon,y2k:backY2K,polaroid:backPolaroid,film:backFilm,magazine:backMagazine,
@@ -1298,7 +1370,7 @@ const BACK_RENDERERS={
   student_id:backStudentId,concert_ticket:backConcertTicket,album_tracklist:backAlbumTracklist,starry_night:backStarryNight,butterfly:backButterfly,cherry_strawberry:backCherryStrawberry,
   cat_puppy:backCatPuppy,bubble_pop:backBubblePop,glass_acrylic:backGlassAcrylic,chrome:backChrome,racing:backRacing,varsity:backVarsity,sailor:backSailor,christmas:backChristmas,halloween:backHalloween,sakura:backSakura,summer_soda:backSummerSoda,
   trump:backTrump,dressing_mirror:backDressingMirror,signature:backSignature,
-  candy_pop:backCandyPop,teddy_bear:backTeddyBear,rising_star:backRisingStar,japan_traditional:backJapanTraditional,fireworks:backFireworks,gyaru:backGyaru,city_pop:backCityPop
+  candy_pop:backCandyPop,teddy_bear:backTeddyBear,rising_star:backRisingStar,japan_traditional:backJapanTraditional,fireworks:backFireworks,gyaru:backGyaru,city_pop:backCityPop,mathilda:backMathilda
 };
 export async function renderTemplateFront(id,env){const t=getTemplate(id),fn=FRONT_RENDERERS[t.front]||frontRibbon;return fn(env)}
 export async function renderTemplateBack(id,env){const t=getTemplate(id),fn=BACK_RENDERERS[t.back]||backRibbon;return fn(env)}

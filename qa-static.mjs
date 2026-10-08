@@ -4,7 +4,7 @@ const W = 650;
 const H = 1004;
 const EXPECTED_NUMBERS = [
   ...Array.from({ length: 11 }, (_, i) => i + 1),
-  ...Array.from({ length: 35 }, (_, i) => i + 14),
+  ...Array.from({ length: 36 }, (_, i) => i + 14),
 ];
 const KNOWN_EXTRAS = new Set(["schoolName", "signatureImage", "trumpOptions"]);
 const KNOWN_BACK_STYLES = new Set(["center", "diagonal", "pattern", "pattern45"]);
@@ -84,7 +84,7 @@ function makeEnv(template) {
 const fonts = new Set(FONT_REGISTRY.map((x) => x.name));
 const templates = getTemplateList();
 
-pass(templates.length === 46, `Expected 46 templates, found ${templates.length}`);
+pass(templates.length === 47, `Expected 47 templates, found ${templates.length}`);
 pass(new Set(templates.map((x) => x.id)).size === templates.length, "Template IDs must be unique");
 pass(new Set(templates.map((x) => x.label)).size === templates.length, "Template labels must be unique");
 
