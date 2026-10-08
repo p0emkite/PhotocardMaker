@@ -1125,27 +1125,54 @@ function peppermintCandy(ctx,x,y,s,color1="#FF4F63",color2="#FFFFFF",angle=0){
   for(let i=0;i<6;i++){ctx.save();ctx.rotate(i*Math.PI/3);ctx.beginPath();ctx.moveTo(0,0);ctx.bezierCurveTo(s*.08,-s*.10,s*.20,-s*.35,s*.06,-s*.47);ctx.arc(0,0,s*.48,-Math.PI/2,-Math.PI/6);ctx.closePath();ctx.fill();ctx.restore()}
   ctx.restore()
 }
+// Glossy, individually shaded sweets; the border is built entirely from overlapping candy.
+function candyBonbon(ctx,x,y,s,color,kind=0,angle=0){
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);
+  ctx.shadowColor="rgba(66,16,47,.32)";ctx.shadowBlur=4;ctx.shadowOffsetY=2;
+  const g=ctx.createLinearGradient(-s*.3,-s*.4,s*.4,s*.45);
+  g.addColorStop(0,lighten(color,.38));g.addColorStop(.38,color);g.addColorStop(1,mixHex(color,"#692344",.28));
+  ctx.fillStyle=g;ctx.strokeStyle=mixHex(color,"#63203C",.30);ctx.lineWidth=1.4;
+  ctx.beginPath();
+  if(kind===0)ctx.ellipse(0,0,s*.62,s*.36,0,0,Math.PI*2);
+  else ctx.roundRect(-s*.48,-s*.39,s*.96,s*.78,kind===1?s*.20:s*.38);
+  ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  if(kind===2){
+    ctx.save();ctx.clip();ctx.strokeStyle="rgba(255,255,255,.76)";ctx.lineWidth=s*.12;
+    for(let xx=-s;xx<s;xx+=s*.32){ctx.beginPath();ctx.moveTo(xx,-s*.6);ctx.lineTo(xx+s*.55,s*.6);ctx.stroke()}ctx.restore()
+  }
+  ctx.fillStyle="rgba(255,255,255,.52)";ctx.beginPath();ctx.ellipse(-s*.17,-s*.18,s*.20,s*.075,-.25,0,Math.PI*2);ctx.fill();ctx.restore()
+}
 function candyFrameDense(ctx,W,H,c){
   ctx.save();ctx.beginPath();ctx.roundRect(0,0,W,H,28);ctx.clip();
-  const band=ctx.createLinearGradient(0,0,W,H);
-  band.addColorStop(0,"#FFF2FA");band.addColorStop(.5,lighten(c.element,.86));band.addColorStop(1,"#E9F5FF");
-  ctx.fillStyle=band;ctx.beginPath();ctx.roundRect(0,0,W,H,28);ctx.roundRect(94,106,W-188,H-212,22);ctx.fill("evenodd");
-  const palette=[c.element,"#FF4F72","#FFAA2E","#28C96B","#38A8FF","#8D62E8","#F44336","#FFE33D","#29D3C3"];
-  const topY=[34,62,88],bottomY=[H-34,H-62,H-88];
+  const palette=["#FF408D","#FFAA20","#28CB69","#249EFF","#A04DED","#F34243","#FFE031","#18CDBE",c.element];
+  // Overlapping rows extend beyond the card edge and cover every point in the band.
+  // No solid or white backing: even the deepest layer consists of individual sweets.
+  ctx.save();ctx.beginPath();ctx.roundRect(0,0,W,H,28);ctx.roundRect(94,106,W-188,H-212,22);ctx.clip("evenodd");
   let k=0;
-  for(const y of topY)for(let x=24;x<W-16;x+=31){jellyBean(ctx,x+(k%2?6:-4),y,28+(k%3)*3,palette[k%palette.length],((k%5)-2)*.22);k++}
-  for(const y of bottomY)for(let x=18;x<W-14;x+=30){jellyBean(ctx,x+(k%2?5:-3),y,27+(k%4)*2,palette[k%palette.length],((k%6)-3)*.18);k++}
-  for(let y=116;y<H-112;y+=31){
-    jellyBean(ctx,34+(k%2?8:0),y,29+(k%3)*2,palette[k%palette.length],1.1+((k%4)-2)*.18);k++;
-    jellyBean(ctx,67-(k%2?4:0),y+9,26+(k%4)*2,palette[k%palette.length],1.18+((k%5)-2)*.15);k++;
-    jellyBean(ctx,W-34-(k%2?8:0),y,29+(k%3)*2,palette[k%palette.length],-1.1+((k%4)-2)*.18);k++;
-    jellyBean(ctx,W-67+(k%2?4:0),y+9,26+(k%4)*2,palette[k%palette.length],-1.18+((k%5)-2)*.15);k++
+  for(const edge of [0,1])for(let row=0;row<5;row++){
+    const y=edge?H-row*26:row*26;
+    for(let x=-24;x<W+40;x+=36){
+      candyBonbon(ctx,x+(row%2?18:0),y,70,palette[(k*5+row)%palette.length],0,((k%3)-1)*.09);k++
+    }
   }
-  for(const [x,y,s,col,a] of [
-    [120,53,34,"#FF4F63",.12],[W-126,56,31,"#E73448",-.14],[92,H-56,31,"#F23858",-.12],[W-104,H-53,35,"#FF4F63",.14],
-    [50,260,29,"#F23858",.10],[W-48,390,28,"#E73448",-.10],[50,H-290,30,"#FF4F63",.08],[W-50,H-205,28,"#F23858",-.08]
-  ])peppermintCandy(ctx,x,y,s,col,"#FFFFFF",a);
-  wrappedCandy(ctx,180,73,23,"#F04D62",-.12);wrappedCandy(ctx,W-190,H-73,24,"#2FCB77",.12);
+  for(const edge of [0,1])for(let col=0;col<4;col++){
+    const x=edge?W-col*28:col*28;
+    for(let y=112;y<H-90;y+=36){
+      candyBonbon(ctx,x,y+(col%2?18:0),70,palette[(k*5+col)%palette.length],0,Math.PI/2+((k%3)-1)*.09);k++
+    }
+  }
+  // Bigger square, striped and jelly sweets break up the rows into a piled-candy frame.
+  for(let i=0,x=28;x<W;x+=73,i++){
+    candyBonbon(ctx,x,47+(i%2?10:-9),52+(i%3)*5,palette[(i*2)%8],i%3,(i%3-1)*.22);
+    candyBonbon(ctx,W-x,H-48+(i%2?-8:8),55+(i%3)*4,palette[(i*3+2)%8],(i+1)%3,(i%3-1)*.18)
+  }
+  for(let i=0,y=161;y<H-130;y+=91,i++){
+    candyBonbon(ctx,44+(i%2?10:-6),y,55+(i%3)*4,palette[(i*3+1)%8],(i+1)%3,(i%3-1)*.28);
+    candyBonbon(ctx,W-45+(i%2?-8:7),y+25,57+(i%2)*5,palette[(i*3+4)%8],i%3,(i%3-1)*.25)
+  }
+  ctx.restore();
+  for(const [x,y,size,col,a] of [[120,53,43,"#FF4F63",.12],[W-126,56,39,"#E73448",-.14],[92,H-56,40,"#F23858",-.12],[W-104,H-53,44,"#FF4F63",.14],[48,318,38,"#F23858",.10],[W-48,418,39,"#E73448",-.10],[48,H-290,40,"#FF4F63",.08]])peppermintCandy(ctx,x,y,size,col,"#FFFFFF",a);
+  wrappedCandy(ctx,204,65,29,"#F04D62",-.12);wrappedCandy(ctx,W-190,H-65,30,"#2FCB77",.12);
   candyLollipop(ctx,88,136,40,"#FF4F9A","#FFFFFF",-.25);candyLollipop(ctx,W-88,H-150,39,"#4F9CFF","#FFFFFF",.24);ctx.restore()
 }
 

@@ -1,5 +1,5 @@
 import {drawNameText} from "./name-text.js?v=1";
-import { getTemplateList, renderTemplateFront, renderTemplateBack, FONT_MAP } from "./templates.js?v=14";
+import { getTemplateList, renderTemplateFront, renderTemplateBack, FONT_MAP } from "./templates.js?v=15";
 
 const W=650,H=1004,R=28;
 const $=id=>document.getElementById(id);

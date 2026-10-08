@@ -160,6 +160,6 @@ Custom group logos can optionally be committed directly to this repository from 
 
 현재 등록된 전체 47개 템플릿의 이름 영역을 검토했습니다. 이름은 폰트의 em-box 대신 실제 글자 외곽 경계로 중심 정렬하며, 네임플레이트 높이와 폭 안에 맞춥니다. 템플릿별 좌표·여백·레이싱 회전값은 `templates.js`의 `NAME_AREAS`, 공통 렌더러는 `name-text.js`에서 관리합니다.
 
-Candy Pop은 네 변 전체에 불투명 파스텔 배경 띠를 추가했습니다. 이름 초기화는 현재 템플릿의 좌표를 복원합니다. 저장된 예전 기본 좌표는 자동 보정하지만, 직접 조정한 위치는 유지합니다.
+Candy Pop은 별도 배경 띠 없이 네 변 전체를 겹겹이 쌓인 유광 사탕으로 채웁니다. 젤리빈·줄무늬 캔디·둥근 사각 사탕을 촘촘하게 겹쳐 사진이 틈 사이로 비치지 않습니다. 이름 초기화는 현재 템플릿의 좌표를 복원합니다. 저장된 예전 기본 좌표는 자동 보정하지만, 직접 조정한 위치는 유지합니다.
 
 전체 검토표: [NAME_LAYOUT_AUDIT.md](NAME_LAYOUT_AUDIT.md)

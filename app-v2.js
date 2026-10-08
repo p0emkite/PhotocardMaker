@@ -1,5 +1,5 @@
 import {drawNameText} from "./name-text.js?v=1";
-import {FONT_REGISTRY,FONT_MAP,TEMPLATE_REGISTRY,getTemplate,getTemplateList,renderTemplateFront,renderTemplateBack,migrateNamePosition,NAME_LAYOUT_VERSION} from "./templates.js?v=14";
+import {FONT_REGISTRY,FONT_MAP,TEMPLATE_REGISTRY,getTemplate,getTemplateList,renderTemplateFront,renderTemplateBack,migrateNamePosition,NAME_LAYOUT_VERSION} from "./templates.js?v=15";
 const $=id=>document.getElementById(id);
 const W=650,H=1004,R=38;
 const STORAGE_KEY="photocard-maker-v2-defaults";
